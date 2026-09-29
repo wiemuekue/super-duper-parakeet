@@ -106,6 +106,7 @@
   }
 
   *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
@@ -146,7 +147,7 @@
     position: relative; z-index: 1;
     max-width: 640px;
     margin: 0 auto;
-    padding-top: env(safe-area-inset-top);
+    padding-top: calc(env(safe-area-inset-top) + 12px);
     padding-bottom: calc(env(safe-area-inset-bottom) + 118px);
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
@@ -155,12 +156,6 @@
   }
   body.modal-open #app { transform: scale(0.94); opacity: 0.85; }
 
-  .nav { padding: 14px 4px 14px; }
-  .nav-sub {
-    font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
-    color: var(--accent);
-  }
-  .nav h1 { margin: 2px 0 0; font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: 0.01em; }
 
   /* ---------- Glas-Karten ---------- */
   .card {
@@ -178,12 +173,7 @@
     margin: 0; font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: -0.01em;
     display: flex; align-items: center; gap: 8px;
   }
-  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .hint { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--label2); }
-  .tag {
-    font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 7px;
-    color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent);
-  }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .value {
     font-family: var(--font-rounded); font-weight: 600; font-variant-numeric: tabular-nums;
@@ -228,11 +218,14 @@
     display: block; height: 6px;
     border: 1.5px solid var(--label2); border-top: 0;
   }
-  .tpl-badge {
-    position: absolute; right: 10px; top: 10px;
-    font-size: 11px; font-weight: 600; color: var(--label2);
-    padding: 3px 8px; border-radius: 10px; background: var(--fill);
+  .card-tpl { padding-top: 12px; }
+  .card-tpl .template { margin-top: 0; }
+  .tpl-calib {
+    position: absolute; right: 10px; top: 10px; height: 30px; padding: 0 10px;
+    background: var(--card); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
+  .tpl-calib svg { width: 18px; height: 18px; }
 
   .egg-readout { display: flex; align-items: flex-end; justify-content: space-between; margin: 14px 2px 4px; }
   .weight-big { font-family: var(--font-rounded); font-size: 40px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -287,6 +280,22 @@
     box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
   }
   .range-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--label3); margin-top: -2px; font-variant-numeric: tabular-nums; }
+  .range-labels.strong { color: var(--label2); font-weight: 500; }
+
+  /* Bipolarer Regler: Füllung von der Mitte zum Knopf, Mittelmarke */
+  .bipolar { position: relative; }
+  .bipolar::before {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 14px;
+    margin: -4px 0 0 -1px; border-radius: 1px; background: var(--label3); pointer-events: none;
+  }
+  .bipolar input[type="range"] { position: relative; --a: 0.5; --b: 0.5; }
+  .bipolar input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(to right,
+      var(--track) 0, var(--track) calc(14px + (100% - 28px) * var(--a)),
+      var(--accent) calc(14px + (100% - 28px) * var(--a)), var(--accent) calc(14px + (100% - 28px) * var(--b)),
+      var(--track) calc(14px + (100% - 28px) * var(--b)), var(--track) 100%);
+  }
+  .bipolar input[type="range"]::-moz-range-progress { background: transparent; }
 
   /* ---------- Segmented Control ---------- */
   .segmented {
@@ -345,13 +354,6 @@
   .boil b { display: block; margin-top: 2px; font-family: var(--font-rounded); font-size: 20px; color: var(--label); font-variant-numeric: tabular-nums; }
 
   /* ---------- Formel ---------- */
-  .formula {
-    margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--fill);
-    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; line-height: 19px;
-    color: var(--label2); overflow-x: auto; white-space: nowrap;
-  }
-  .formula b { color: var(--label); font-weight: 600; }
-  .footnote { margin: 4px 8px 0; font-size: 12px; line-height: 17px; color: var(--label2); text-align: center; }
 
   /* ---------- Schwebende Glas-Leiste unten ---------- */
   .bottom-bar {
@@ -433,12 +435,12 @@
     font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 12px;
     background: var(--fill); color: var(--label2);
   }
-  .ring-wrap { position: relative; width: min(78vw, 300px); aspect-ratio: 1; margin: 18px auto 10px; }
+  .ring-wrap { position: relative; width: min(72vw, 280px); max-width: 100%; aspect-ratio: 1; margin: 12px auto 14px; }
   .ring { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
   .ring-track { stroke: var(--fill2); }
   .ring-prog { transition: stroke 0.4s ease; }
   .ring-wrap.done .ring-prog { stroke: var(--green); }
-  .ring-wrap.done { animation: pulse 1.3s ease-in-out infinite; }
+  .ring-wrap.ringing { animation: pulse 1.3s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
   .ring-center {
     position: absolute; inset: 0;
@@ -450,7 +452,32 @@
   }
   .t-sub { margin-top: 8px; font-size: 14px; color: var(--label2); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 5px; }
   .t-sub svg { width: 14px; height: 14px; }
-  .t-buttons { display: flex; justify-content: space-between; align-items: center; max-width: 330px; margin: 18px auto 0; padding: 0 6px; }
+  /* Härtegrad-Streifen */
+  .stage { max-width: 360px; margin: 4px auto 0; }
+  .stage-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .stage-name { font-size: 15px; font-weight: 600; }
+  .stage-note { font-size: 12px; color: var(--label2); font-variant-numeric: tabular-nums; text-align: right; }
+  .stage-bar {
+    position: relative; height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, #FFF3C4 0%, #FFD60A var(--s1, 35%), #FFB020 var(--s2, 55%), #F08A00 var(--s3, 78%), #B86A10 100%);
+    opacity: 0.95;
+  }
+  .stage-mk {
+    position: absolute; top: -3px; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px;
+    background: var(--label3);
+  }
+  .stage-mk.target { background: var(--label); width: 3px; margin-left: -1.5px; }
+  .stage-cursor {
+    position: absolute; top: 50%; left: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
+    background: var(--knob); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+    transition: left 0.25s linear;
+  }
+  .stage-ticks { position: relative; height: 30px; margin-top: 6px; font-size: 11px; color: var(--label2); font-variant-numeric: tabular-nums; }
+  .stage-ticks span { position: absolute; top: 0; transform: translateX(-50%); text-align: center; line-height: 13px; white-space: nowrap; }
+  .stage-ticks span.target { color: var(--label); font-weight: 600; }
+  .t-time.over { color: var(--green); font-size: min(14vw, 56px); }
+
+  .t-buttons { display: flex; justify-content: space-between; align-items: center; max-width: 330px; margin: 14px auto 0; padding: 0 6px; }
   .round-btn {
     width: 86px; height: 86px; border-radius: 50%; border: 0;
     font-size: 17px; font-weight: 500;
@@ -512,26 +539,8 @@
 <div id="bgfx" aria-hidden="true"></div>
 
 <main id="app">
-  <header class="nav">
-    <div class="nav-sub">Physikalische Eieruhr</div>
-    <h1>Eierzeit</h1>
-  </header>
-
   <!-- 1:1 Schablone -->
-  <section class="card" aria-labelledby="tplTitle">
-    <div class="card-head">
-      <div>
-        <h2 id="tplTitle">Ei-Schablone <span class="tag">1:1</span></h2>
-        <p class="hint">Lege dein Ei flach auf die Silhouette und verschiebe den Regler, bis die Umrisse exakt übereinstimmen.</p>
-      </div>
-      <button class="icon-btn pressable" id="calibBtn" type="button" aria-label="Maßstab mit Kreditkarte kalibrieren">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19M6 15h4"/>
-        </svg>
-        Karte
-      </button>
-    </div>
-
+  <section class="card card-tpl" aria-label="Ei-Schablone in Originalgröße">
     <div class="template" id="template">
       <svg id="eggSvg" class="egg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ei-Silhouette in Originalgröße">
         <defs>
@@ -550,7 +559,12 @@
         <path id="eggOutline" class="egg-outline" fill="none" vector-effect="non-scaling-stroke"/>
       </svg>
       <div class="scalebar" aria-hidden="true"><i id="scaleBar"></i>1 cm</div>
-      <div class="tpl-badge" aria-hidden="true">Raster 5 mm</div>
+      <button class="icon-btn tpl-calib pressable" id="calibBtn" type="button" aria-label="Maßstab mit Kreditkarte kalibrieren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19M6 15h4"/>
+        </svg>
+        Karte
+      </button>
     </div>
 
     <div class="egg-readout">
@@ -615,14 +629,19 @@
     </div>
   </section>
 
-  <!-- Formel -->
-  <section class="card" aria-labelledby="fTitle">
-    <h2 id="fTitle">Berechnung</h2>
-    <p class="hint">Klassische Williams-Formel (C. D. H. Williams) für die Wärmeleitung ins Eigelb.</p>
-    <div class="formula" id="formula"></div>
+  <!-- Geschmack -->
+  <section class="card" aria-labelledby="tasteTitle">
+    <div class="row">
+      <h2 id="tasteTitle">Mein Geschmack</h2>
+      <span class="value" id="tasteVal">±0 %</span>
+    </div>
+    <div class="bipolar">
+      <label for="taste" class="sr-only">Feinjustierung der Kochzeit in Prozent</label>
+      <input type="range" id="taste" min="-20" max="20" step="1" value="0">
+    </div>
+    <div class="range-labels strong"><span>weicher</span><span>perfekt</span><span>fester</span></div>
+    <p class="seg-desc" id="tasteDesc"></p>
   </section>
-
-  <p class="footnote">Ei mit einem Löffel direkt ins sprudelnd kochende Wasser geben und den Timer sofort starten. Danach kurz kalt abschrecken.</p>
 </main>
 
 <!-- Schwebende Leiste -->
@@ -667,13 +686,28 @@
         <div class="t-sub" id="tSub"></div>
       </div>
     </div>
+    <div class="stage" id="stage">
+      <div class="stage-head">
+        <span class="stage-name" id="stageName">Roh</span>
+        <span class="stage-note" id="stageNote"></span>
+      </div>
+      <div class="stage-bar" id="stageBar">
+        <i class="stage-mk" data-k="soft"></i>
+        <i class="stage-mk" data-k="medium"></i>
+        <i class="stage-mk" data-k="hard"></i>
+        <b class="stage-cursor" id="stageCursor"></b>
+      </div>
+      <div class="stage-ticks" id="stageTicks">
+        <span data-k="soft"></span><span data-k="medium"></span><span data-k="hard"></span>
+      </div>
+    </div>
     <div class="t-buttons">
       <button class="round-btn gray pressable" id="resetBtn" type="button">Reset</button>
       <button class="round-btn green pressable" id="mainBtn" type="button">Start</button>
     </div>
     <div class="t-info">
       <div><span class="dot" id="wlDot"></span><span id="wlText">Display-Sperre: inaktiv</span></div>
-      <div><span class="dot on"></span><span>Alarm mit Synthesizer-Klang &amp; Vibration bei 00:00. Stummschalter ggf. deaktivieren.</span></div>
+      <div><span class="dot on"></span><span>Alarm bei 00:00. Danach läuft die Zeit weiter – der Streifen zeigt, wie hart das Ei inzwischen ist.</span></div>
     </div>
   </div>
 </section>
@@ -717,10 +751,15 @@
   // mit c = 3,7 J/(g·K), ρ = 1,038 g/cm³, K = 5,4·10⁻³ W/(cm·K) → Vorfaktor ≈ 0,451 min/g^(2/3)
   const PHYS = { C: 0.451, F: 0.76, RHO: 1.038 };
   const DONENESS = {
-    soft:   { label: 'Weich',      Tz: 63, desc: 'Flüssiges Eigelb, Eiweiß gerade gestockt · Kerntemperatur 63 °C' },
-    medium: { label: 'Wachsweich', Tz: 68, desc: 'Cremiges, wachsweiches Eigelb · Kerntemperatur 68 °C' },
-    hard:   { label: 'Hart',       Tz: 82, desc: 'Durchgehend festes Eigelb · Kerntemperatur 82 °C' }
+    // Tz = Zieltemperatur an der Grenze Eiweiß/Eigelb
+    soft:   { label: 'Weich',      Tz: 63, note: 'Eigelb flüssig',
+              desc: 'Eiweiß gerade fest, Eigelb komplett flüssig · 63 °C am Eigelbrand' },
+    medium: { label: 'Wachsweich', Tz: 74, note: 'nur der Kern cremig',
+              desc: 'Eiweiß komplett fest, Eigelb außen gestockt, nur der Kern weich-cremig · 74 °C am Eigelbrand' },
+    hard:   { label: 'Hart',       Tz: 82, note: 'durchgegart',
+              desc: 'Eiweiß und Eigelb durchgehend fest · 82 °C am Eigelbrand' }
   };
+  const TASTE_MAX = 20;                                    // ± % Feinjustierung
   const START = {
     fridge: { label: 'Kühlschrank', T: 4 },
     room:   { label: 'Raumtemperatur', T: 20 }
@@ -755,6 +794,7 @@
     doneness: store.get('doneness', 'medium'),
     start: store.get('start', 'fridge'),
     altitude: clamp(Math.round((Number(store.get('altitude', 0)) || 0) / 50) * 50, 0, 3000),
+    taste: clamp(Math.round(Number(store.get('taste', 0)) || 0), -TASTE_MAX, TASTE_MAX),
     ppm: Number(store.get('ppm', DEFAULT_PPM))
   };
   if (!DONENESS[state.doneness]) state.doneness = 'medium';
@@ -826,15 +866,21 @@
   const eggClass = m => (m < 53 ? 'S' : m < 63 ? 'M' : m < 73 ? 'L' : 'XL');
 
   /* ======================= Physik ======================= */
+  // Klassische Williams-Formel; der Geschmacksfaktor skaliert die Zeit um ±20 %.
+  function williamsSec(Tz, Tw, Ts, m) {
+    const arg = PHYS.F * (Tw - Ts) / (Tw - Tz);
+    return PHYS.C * Math.pow(m, 2 / 3) * Math.log(Math.max(arg, 1)) * 60;
+  }
   function compute() {
     const Tw = 100 - state.altitude / 285;
     const Ts = START[state.start].T;
-    const Tz = DONENESS[state.doneness].Tz;
     const m = state.weight;
-    const m23 = Math.pow(m, 2 / 3);
-    const arg = PHYS.F * (Tw - Ts) / (Tw - Tz);
-    const tMin = PHYS.C * m23 * Math.log(Math.max(arg, 1));
-    return { Tw, Ts, Tz, m, m23, arg, tMin, sec: Math.max(1, Math.round(tMin * 60)) };
+    const f = 1 + state.taste / 100;
+    const stages = {};
+    for (const k in DONENESS) stages[k] = williamsSec(DONENESS[k].Tz, Tw, Ts, m) * f;
+    const baseSec = Math.max(1, Math.round(stages[state.doneness] / f));
+    const sec = Math.max(1, Math.round(stages[state.doneness]));
+    return { Tw, Ts, m, f, stages, baseSec, sec };
   }
 
   /* ======================= DOM ======================= */
@@ -845,7 +891,10 @@
     chips: $$('.chip'), calibStatus: $('#calibStatus'),
     donDesc: $('#donDesc'),
     altitude: $('#altitude'), altVal: $('#altVal'), gpsBtn: $('#gpsBtn'), gpsLabel: $('#gpsLabel'), gpsStatus: $('#gpsStatus'),
-    boilVal: $('#boilVal'), timeVal: $('#timeVal'), formula: $('#formula'),
+    boilVal: $('#boilVal'), timeVal: $('#timeVal'),
+    taste: $('#taste'), tasteVal: $('#tasteVal'), tasteDesc: $('#tasteDesc'),
+    stageName: $('#stageName'), stageNote: $('#stageNote'), stageBar: $('#stageBar'), stageCursor: $('#stageCursor'),
+    stageMks: $$('.stage-mk'), stageTicks: $$('#stageTicks span'),
     bottomBar: $('#bottomBar'), bbLabel: $('#bbLabel'), bbTime: $('#bbTime'), openTimer: $('#openTimer'), ctaLabel: $('#ctaLabel'),
     backdrop: $('#backdrop'), app: $('#app'),
     timerSheet: $('#timerSheet'), tSummary: $('#tSummary'), ringWrap: $('#ringWrap'), ringProg: $('#ringProg'),
@@ -898,15 +947,14 @@
     const shortSide = Math.min(screen.width, screen.height);
     const isPro = shortSide === 402 && Math.round(window.devicePixelRatio || 1) === 3;
     const info = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>';
-    let text, warn = false;
+    let text = '', warn = false;
     if (custom) {
       text = `Maßstab individuell kalibriert: ${nf(state.ppm, 3)} px/mm (≈ ${nf(state.ppm * 25.4 * (window.devicePixelRatio || 1), 0)} ppi).`;
-    } else if (isPro) {
-      text = `Kalibriert für iPhone 17 Pro: 460 ppi · dpr 3 · ${nf(DEFAULT_PPM, 3)} px/mm.`;
-    } else {
+    } else if (!isPro) {
       warn = true;
       text = 'Dieses Display weicht vom iPhone 17 Pro ab – bitte mit einer Kreditkarte kalibrieren („Karte“).';
     }
+    el.calibStatus.hidden = !text;
     el.calibStatus.classList.toggle('warn', warn);
     el.calibStatus.innerHTML = info + '<span></span>';
     el.calibStatus.lastChild.textContent = text;
@@ -919,11 +967,11 @@
     setText(el.boilVal, nf(r.Tw, 1) + ' °C');
     setText(el.timeVal, fmt(r.sec) + ' min');
     setText(el.donDesc, DONENESS[state.doneness].desc);
-    el.formula.innerHTML =
-      `t = c · m<sup>2/3</sup> · ln(0,76·(T<sub>W</sub>−T<sub>S</sub>)/(T<sub>W</sub>−T<sub>Z</sub>))<br>` +
-      `t = ${nf(PHYS.C, 3)} · ${nf(r.m, 1)}<sup>2/3</sup> · ln(${nf(PHYS.F, 2)}·(${nf(r.Tw, 2)}−${r.Ts})/(${nf(r.Tw, 2)}−${r.Tz}))<br>` +
-      `t = ${nf(PHYS.C, 3)} · ${nf(r.m23, 3)} · ln(${nf(r.arg, 3)})<br>` +
-      `t = <b>${nf(r.tMin, 2)} min</b> ≙ <b>${fmt(r.sec)}</b>`;
+    const t = state.taste;
+    setText(el.tasteVal, t === 0 ? '±0 %' : (t > 0 ? '+' : '−') + Math.abs(t) + ' %');
+    setText(el.tasteDesc, t === 0
+      ? `Genau nach Berechnung: ${fmt(r.sec)} min.`
+      : `${t < 0 ? 'Etwas weicher' : 'Etwas fester'}: ${fmt(r.sec)} statt ${fmt(r.baseSec)} min.`);
     return r;
   }
 
@@ -936,6 +984,7 @@
   function renderAll() {
     paintRange(el.weight);
     paintRange(el.altitude);
+    paintTaste();
     renderEgg();
     renderResult();
     if (T.status === 'idle') timerLoad();
@@ -976,6 +1025,22 @@
     store.set('weight', state.weight);
     scheduleRender();
   }));
+
+  /* ======================= Geschmack ======================= */
+  function paintTaste() {
+    const p = (state.taste + TASTE_MAX) / (2 * TASTE_MAX);
+    el.taste.style.setProperty('--a', Math.min(p, 0.5).toFixed(4));
+    el.taste.style.setProperty('--b', Math.max(p, 0.5).toFixed(4));
+  }
+  el.taste.value = state.taste;
+  el.taste.addEventListener('input', () => {
+    const v = clamp(Math.round(Number(el.taste.value)), -TASTE_MAX, TASTE_MAX);
+    if (v === 0 && state.taste !== 0) haptic(8);           // Einrasten in der Mitte
+    state.taste = v;
+    scheduleRender();
+  });
+  el.taste.addEventListener('change', () => store.set('taste', state.taste));
+  el.taste.addEventListener('dblclick', () => { state.taste = 0; el.taste.value = 0; store.set('taste', 0); haptic(8); scheduleRender(); });
 
   /* ======================= Höhe & GPS ======================= */
   el.altitude.value = state.altitude;
@@ -1174,7 +1239,8 @@
     stopAlarm();
     alarmReps = 0;
     const play = () => {
-      if (alarmReps++ >= 24) { stopAlarm(); releaseWakeLock(); return; }
+      // Nach ca. einer Minute verstummt der Alarm, die Zeit läuft aber weiter
+      if (alarmReps++ >= 24) { stopAlarm(); if (T.status === 'done') { T.status = 'over'; renderTimer(); } return; }
       const c = audioCtx();
       if (c) playMelody(c.currentTime + 0.05);
       try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 800]); } catch (e) { /* */ }
@@ -1210,84 +1276,159 @@
   }
 
   /* ======================= Timer ======================= */
+  // Zustände: idle → running ⇄ paused → done (Alarm, Zeit läuft weiter) → over (still, läuft weiter) → out (Ei raus)
   const RING_C = 2 * Math.PI * 136;
   el.ringProg.style.strokeDasharray = RING_C.toFixed(2);
-  const T = { status: 'idle', totalMs: 0, remainingMs: 0, endAt: 0, raf: 0, iv: 0, cfg: null };
+  const T = { status: 'idle', totalMs: 0, remainingMs: 0, endAt: 0, outMs: 0, raf: 0, iv: 0, cfg: null };
+  const ACTIVE = ['running', 'done', 'over'];
+  const STAGE_KEYS = ['soft', 'medium', 'hard'];
 
   function timerLoad() {
     const r = compute();
     T.cfg = {
-      sec: r.sec, Tw: r.Tw,
+      sec: r.sec, Tw: r.Tw, taste: state.taste, key: state.doneness,
+      stages: r.stages,
       don: DONENESS[state.doneness].label,
       start: START[state.start].label + ' ' + START[state.start].T + ' °C',
       weight: state.weight, alt: state.altitude
     };
     T.totalMs = r.sec * 1000;
     T.remainingMs = T.totalMs;
+    T.outMs = 0;
     T.status = 'idle';
   }
   function remaining() {
     return T.status === 'running' ? Math.max(0, T.endAt - Date.now()) : T.remainingMs;
   }
+  function elapsedMs() {
+    switch (T.status) {
+      case 'running': return T.totalMs - Math.max(0, T.endAt - Date.now());
+      case 'paused': return T.totalMs - T.remainingMs;
+      case 'done':
+      case 'over': return T.totalMs + Math.max(0, Date.now() - T.endAt);
+      case 'out': return T.outMs;
+      default: return 0;
+    }
+  }
   function clockTime(ts) { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
 
-  function renderTimer() {
-    const rem = remaining();
-    const frac = T.totalMs ? rem / T.totalMs : 0;
-    const secLeft = Math.ceil(rem / 1000);
-    const done = T.status === 'done';
+  // Aktueller Garzustand aus der vergangenen Zeit
+  function stageAt(e) {
+    const st = T.cfg.stages;
+    if (e < st.soft) return { name: 'Noch roh', note: 'Weich in ' + fmt(st.soft - e) };
+    if (e < st.medium) return { name: 'Weich', note: 'Eigelb flüssig · wachsweich in ' + fmt(st.medium - e) };
+    if (e < st.hard) return { name: 'Wachsweich', note: 'nur der Kern cremig · hart in ' + fmt(st.hard - e) };
+    if (e < st.hard * 1.3) return { name: 'Hart', note: 'durchgegart' };
+    return { name: 'Sehr hart', note: 'grünlicher Rand am Eigelb möglich' };
+  }
 
-    el.ringProg.style.strokeDashoffset = done ? '0' : (RING_C * (1 - frac)).toFixed(2);
-    el.ringWrap.classList.toggle('done', done);
-    setText(el.tTime, done ? '00:00' : fmt(secLeft));
+  function renderStage(eSec) {
+    const st = T.cfg.stages;
+    const max = Math.max(st.hard * 1.3, eSec * 1.02);
+    const pos = k => (st[k] / max * 100);
+    el.stageBar.style.setProperty('--s1', pos('soft').toFixed(2) + '%');
+    el.stageBar.style.setProperty('--s2', pos('medium').toFixed(2) + '%');
+    el.stageBar.style.setProperty('--s3', pos('hard').toFixed(2) + '%');
+    el.stageMks.forEach(m => {
+      m.style.left = pos(m.dataset.k).toFixed(2) + '%';
+      m.classList.toggle('target', m.dataset.k === T.cfg.key);
+    });
+    el.stageTicks.forEach(t => {
+      const k = t.dataset.k;
+      t.style.left = pos(k).toFixed(2) + '%';
+      t.classList.toggle('target', k === T.cfg.key);
+      const txt = DONENESS[k].label + '\n' + fmt(st[k]);
+      if (t.dataset.v !== txt) { t.innerHTML = DONENESS[k].label + '<br>' + fmt(st[k]); t.dataset.v = txt; }
+    });
+    el.stageCursor.style.left = clamp(eSec / max * 100, 0, 100).toFixed(2) + '%';
+    let name, note;
+    if (T.status === 'idle') { name = 'Ziel: ' + T.cfg.don; note = DONENESS[T.cfg.key].note; }
+    else ({ name, note } = stageAt(eSec));
+    setText(el.stageName, name);
+    setText(el.stageNote, note);
+    return name;
+  }
+
+  function renderTimer() {
+    if (!T.cfg) return;
+    const rem = remaining();
+    const eSec = elapsedMs() / 1000;
+    const s = T.status;
+    const after = s === 'done' || s === 'over' || s === 'out';
+    const overSec = Math.floor(Math.max(0, eSec - T.totalMs / 1000));
+    const secLeft = Math.ceil(rem / 1000);
+
+    el.ringProg.style.strokeDashoffset = after ? '0' : (RING_C * (1 - (T.totalMs ? rem / T.totalMs : 0))).toFixed(2);
+    el.ringWrap.classList.toggle('done', after);
+    el.ringWrap.classList.toggle('ringing', s === 'done');
+    el.tTime.classList.toggle('over', s === 'done' || s === 'over');
+    setText(el.tTime, s === 'out' ? fmt(Math.floor(eSec)) : after ? '+' + fmt(overSec) : fmt(secLeft));
 
     const bellIcon = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>';
-    let sub;
-    if (T.status === 'running') sub = bellIcon + '<span>fertig um ' + clockTime(T.endAt) + '</span>';
-    else if (T.status === 'paused') sub = '<span>Pausiert · von ' + fmt(T.totalMs / 1000) + '</span>';
-    else if (done) sub = '<span>Fertig! Ei abschrecken 🥚</span>';
-    else sub = '<span>Gesamt ' + fmt(T.totalMs / 1000) + ' min</span>';
+    const sub = {
+      idle: '<span>Gesamt ' + fmt(T.totalMs / 1000) + ' min</span>',
+      running: bellIcon + '<span>fertig um ' + clockTime(T.endAt) + '</span>',
+      paused: '<span>Pausiert · von ' + fmt(T.totalMs / 1000) + '</span>',
+      done: '<span>Fertig! Zeit läuft weiter</span>',
+      over: '<span>Gesamt ' + fmt(Math.floor(eSec)) + ' im Wasser</span>',
+      out: '<span>Gesamte Kochzeit</span>'
+    }[s];
     if (el.tSub.dataset.v !== sub) { el.tSub.innerHTML = sub; el.tSub.dataset.v = sub; }
+
+    const stageName = renderStage(eSec);
 
     const mb = el.mainBtn;
     const [label, cls] = {
-      idle: ['Start', 'green'], running: ['Pause', 'orange'], paused: ['Weiter', 'green'], done: ['Stopp', 'red']
-    }[T.status];
+      idle: ['Start', 'green'], running: ['Pause', 'orange'], paused: ['Weiter', 'green'],
+      done: ['Alarm aus', 'red'], over: ['Ei raus', 'orange'], out: ['Neu', 'green']
+    }[s];
     setText(mb, label);
     if (mb.dataset.cls !== cls) { mb.classList.remove('green', 'orange', 'red'); mb.classList.add(cls); mb.dataset.cls = cls; }
-    el.resetBtn.disabled = T.status === 'idle';
+    el.resetBtn.disabled = s === 'idle';
 
-    if (T.cfg) {
-      const s = `<span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>`;
-      if (el.tSummary.dataset.v !== s) { el.tSummary.innerHTML = s; el.tSummary.dataset.v = s; }
-    }
+    const tasteChip = T.cfg.taste ? `<span>Geschmack ${T.cfg.taste > 0 ? '+' : '−'}${Math.abs(T.cfg.taste)} %</span>` : '';
+    const sum = `<span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>${tasteChip}`;
+    if (el.tSummary.dataset.v !== sum) { el.tSummary.innerHTML = sum; el.tSummary.dataset.v = sum; }
 
-    // Leiste unten
-    const live = T.status !== 'idle';
-    el.bottomBar.classList.toggle('live', T.status === 'running' || T.status === 'paused');
-    el.bottomBar.classList.toggle('done', done);
-    setText(el.bbLabel, { idle: 'Kochzeit', running: 'Timer läuft', paused: 'Pausiert', done: 'Fertig!' }[T.status]);
-    const bbt = (live ? fmt(done ? 0 : secLeft) : fmt(compute().sec)) + '|min';
+    // Schwebende Leiste unten
+    const live = s !== 'idle';
+    el.bottomBar.classList.toggle('live', s === 'running' || s === 'paused');
+    el.bottomBar.classList.toggle('done', after);
+    setText(el.bbLabel, {
+      idle: 'Kochzeit', running: 'Läuft · ' + stageName, paused: 'Pausiert · ' + stageName,
+      done: 'Fertig · ' + stageName, over: 'Im Wasser · ' + stageName, out: 'Ei raus · ' + stageName
+    }[s]);
+    const bbt = (s === 'idle' ? fmt(compute().sec) : s === 'out' ? fmt(Math.floor(eSec)) : after ? '+' + fmt(overSec) : fmt(secLeft)) + '|min';
     if (el.bbTime.dataset.v !== bbt) {
-      const [a, b] = bbt.split('|');
-      el.bbTime.innerHTML = a + '<small>' + b + '</small>';
+      const [x, y] = bbt.split('|');
+      el.bbTime.innerHTML = x + '<small>' + y + '</small>';
       el.bbTime.dataset.v = bbt;
     }
     setText(el.ctaLabel, live ? 'Öffnen' : 'Timer');
 
-    const title = T.status === 'running' ? '⏱ ' + fmt(secLeft) + ' · Eierzeit' : done ? '🔔 Fertig · Eierzeit' : 'Eierzeit';
+    const title = s === 'running' ? '⏱ ' + fmt(secLeft) + ' · Eierzeit'
+      : (s === 'done' || s === 'over') ? '🔔 +' + fmt(overSec) + ' · Eierzeit' : 'Eierzeit';
     if (document.title !== title) document.title = title;
   }
 
-  function loop() {
-    if (T.status !== 'running') return;
-    if (T.endAt - Date.now() <= 0) { finish(); return; }
+  function tick() {
+    if (!ACTIVE.includes(T.status)) return;
+    if (T.status === 'running' && T.endAt - Date.now() <= 0) { finish(); return; }
     renderTimer();
+  }
+  function loop() {
+    if (!ACTIVE.includes(T.status)) return;
+    tick();
     T.raf = requestAnimationFrame(loop);
   }
   function stopLoops() {
     if (T.raf) { cancelAnimationFrame(T.raf); T.raf = 0; }
     if (T.iv) { clearInterval(T.iv); T.iv = 0; }
+  }
+  function startLoops() {
+    stopLoops();
+    T.raf = requestAnimationFrame(loop);
+    T.iv = setInterval(tick, 250);                          // Fallback, falls rAF gedrosselt wird
   }
   function startTimer() {
     unlockAudio();
@@ -1295,10 +1436,7 @@
     T.endAt = Date.now() + T.remainingMs;
     T.status = 'running';
     acquireWakeLock();
-    stopLoops();
-    T.raf = requestAnimationFrame(loop);
-    // Fallback, falls rAF gedrosselt wird
-    T.iv = setInterval(() => { if (T.status === 'running' && T.endAt - Date.now() <= 0) finish(); }, 250);
+    startLoops();
     renderTimer();
   }
   function pauseTimer() {
@@ -1316,12 +1454,20 @@
     renderTimer();
   }
   function finish() {
-    stopLoops();
     T.status = 'done';
     T.remainingMs = 0;
+    startLoops();                                           // Zeit läuft nach 00:00 weiter
     renderTimer();
     startAlarm();
     if (openSheetEl !== el.timerSheet) openSheet(el.timerSheet);
+  }
+  function takeOut() {
+    T.outMs = elapsedMs();
+    T.status = 'out';
+    stopLoops();
+    stopAlarm();
+    releaseWakeLock();
+    renderTimer();
   }
 
   el.mainBtn.addEventListener('click', () => {
@@ -1331,7 +1477,9 @@
       case 'idle':
       case 'paused': startTimer(); break;
       case 'running': pauseTimer(); break;
-      case 'done': resetTimer(); break;
+      case 'done': stopAlarm(); T.status = 'over'; renderTimer(); break;
+      case 'over': takeOut(); break;
+      case 'out': resetTimer(); break;
     }
   });
   el.resetBtn.addEventListener('click', () => { haptic([8, 30, 8]); resetTimer(); });
@@ -1345,11 +1493,11 @@
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (T.status === 'running') {
-      if (T.endAt - Date.now() <= 0) finish();
-      else { stopLoops(); T.raf = requestAnimationFrame(loop); T.iv = setInterval(() => { if (T.status === 'running' && T.endAt - Date.now() <= 0) finish(); }, 250); }
+    if (ACTIVE.includes(T.status)) {
+      if (T.status === 'running' && T.endAt - Date.now() <= 0) finish();
+      else startLoops();
+      if (!wakeLock) acquireWakeLock();
     }
-    if ((T.status === 'running' || (T.status === 'done' && alarmTimer)) && !wakeLock) acquireWakeLock();
     if (actx && actx.state !== 'running' && T.status !== 'idle') actx.resume().catch(() => {});
     renderTimer();
   });
