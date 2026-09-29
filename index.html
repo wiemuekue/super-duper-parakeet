@@ -218,6 +218,9 @@
     display: block; height: 6px;
     border: 1.5px solid var(--label2); border-top: 0;
   }
+  .card-model { padding: 12px 12px 12px; }
+  .card-model .segmented { margin-top: 0; }
+  .card-model .seg-desc { margin-top: 8px; }
   .card-tpl { padding-top: 12px; }
   .card-tpl .template { margin-top: 0; }
   .tpl-calib {
@@ -539,6 +542,16 @@
 <div id="bgfx" aria-hidden="true"></div>
 
 <main id="app">
+  <!-- Formel-Umschalter -->
+  <section class="card card-model" aria-label="Berechnungsformel">
+    <div class="segmented" id="segModel" role="radiogroup" aria-label="Berechnungsformel">
+      <div class="seg-thumb" aria-hidden="true"></div>
+      <button type="button" role="radio" data-value="williams">Williams<small id="modelTimeWilliams">–:––</small></button>
+      <button type="button" role="radio" data-value="gruber">Gruber<small id="modelTimeGruber">–:––</small></button>
+    </div>
+    <p class="seg-desc" id="modelDesc"></p>
+  </section>
+
   <!-- 1:1 Schablone -->
   <section class="card card-tpl" aria-label="Ei-Schablone in Originalgröße">
     <div class="template" id="template">
@@ -750,6 +763,12 @@
   // Klassische Williams-Formel: t = c·ρ^(1/3) / (K·π²·(4π/3)^(2/3)) · m^(2/3) · ln(0,76·(T_W−T_S)/(T_W−T_Z))
   // mit c = 3,7 J/(g·K), ρ = 1,038 g/cm³, K = 5,4·10⁻³ W/(cm·K) → Vorfaktor ≈ 0,451 min/g^(2/3)
   const PHYS = { C: 0.451, F: 0.76, RHO: 1.038 };
+  // Gruber-Formel (Werner Gruber): t = 0,15 · d² · ln(2 · (T_W − T_S) / (T_W − T_Z)), d = Eidurchmesser in cm, t in min
+  const GRUBER = { C: 0.15, F: 2 };
+  const MODELS = {
+    williams: { label: 'Williams', desc: 'Williams: Wärmeleitung nach Gewicht (m^⅔)' },
+    gruber:   { label: 'Gruber',   desc: 'Gruber: nach Eidurchmesser (d²)' }
+  };
   const DONENESS = {
     // Tz = Zieltemperatur an der Grenze Eiweiß/Eigelb
     soft:   { label: 'Weich',      Tz: 63, note: 'Eigelb flüssig',
@@ -793,12 +812,14 @@
     weight: clamp(Number(store.get('weight', 58)) || 58, W_MIN, W_MAX),
     doneness: store.get('doneness', 'medium'),
     start: store.get('start', 'fridge'),
+    model: store.get('model', 'williams'),
     altitude: clamp(Math.round((Number(store.get('altitude', 0)) || 0) / 50) * 50, 0, 3000),
     taste: clamp(Math.round(Number(store.get('taste', 0)) || 0), -TASTE_MAX, TASTE_MAX),
     ppm: Number(store.get('ppm', DEFAULT_PPM))
   };
   if (!DONENESS[state.doneness]) state.doneness = 'medium';
   if (!START[state.start]) state.start = 'fridge';
+  if (!MODELS[state.model]) state.model = 'williams';
   if (!(state.ppm >= 4.5 && state.ppm <= 7.5)) state.ppm = DEFAULT_PPM;
 
   /* ======================= Haptik ======================= */
@@ -866,21 +887,29 @@
   const eggClass = m => (m < 53 ? 'S' : m < 63 ? 'M' : m < 73 ? 'L' : 'XL');
 
   /* ======================= Physik ======================= */
-  // Klassische Williams-Formel; der Geschmacksfaktor skaliert die Zeit um ±20 %.
+  // Kochzeit in Sekunden nach gewählter Formel; der Geschmacksfaktor skaliert die Zeit um ±20 %.
   function williamsSec(Tz, Tw, Ts, m) {
     const arg = PHYS.F * (Tw - Ts) / (Tw - Tz);
     return PHYS.C * Math.pow(m, 2 / 3) * Math.log(Math.max(arg, 1)) * 60;
   }
-  function compute() {
+  function gruberSec(Tz, Tw, Ts, dCm) {
+    const arg = GRUBER.F * (Tw - Ts) / (Tw - Tz);
+    return GRUBER.C * dCm * dCm * Math.log(Math.max(arg, 1)) * 60;
+  }
+  function compute(model = state.model) {
     const Tw = 100 - state.altitude / 285;
     const Ts = START[state.start].T;
     const m = state.weight;
+    const d = eggDims(m).B / 10;                            // Eibreite aus der Schablone in cm
     const f = 1 + state.taste / 100;
     const stages = {};
-    for (const k in DONENESS) stages[k] = williamsSec(DONENESS[k].Tz, Tw, Ts, m) * f;
+    for (const k in DONENESS) {
+      const Tz = DONENESS[k].Tz;
+      stages[k] = (model === 'gruber' ? gruberSec(Tz, Tw, Ts, d) : williamsSec(Tz, Tw, Ts, m)) * f;
+    }
     const baseSec = Math.max(1, Math.round(stages[state.doneness] / f));
     const sec = Math.max(1, Math.round(stages[state.doneness]));
-    return { Tw, Ts, m, f, stages, baseSec, sec };
+    return { Tw, Ts, m, d, f, stages, baseSec, sec, model };
   }
 
   /* ======================= DOM ======================= */
@@ -893,6 +922,7 @@
     altitude: $('#altitude'), altVal: $('#altVal'), gpsBtn: $('#gpsBtn'), gpsLabel: $('#gpsLabel'), gpsStatus: $('#gpsStatus'),
     boilVal: $('#boilVal'), timeVal: $('#timeVal'),
     taste: $('#taste'), tasteVal: $('#tasteVal'), tasteDesc: $('#tasteDesc'),
+    modelDesc: $('#modelDesc'), modelTime: { williams: $('#modelTimeWilliams'), gruber: $('#modelTimeGruber') },
     stageName: $('#stageName'), stageNote: $('#stageNote'), stageBar: $('#stageBar'), stageCursor: $('#stageCursor'),
     stageMks: $$('.stage-mk'), stageTicks: $$('#stageTicks span'),
     bottomBar: $('#bottomBar'), bbLabel: $('#bbLabel'), bbTime: $('#bbTime'), openTimer: $('#openTimer'), ctaLabel: $('#ctaLabel'),
@@ -967,6 +997,9 @@
     setText(el.boilVal, nf(r.Tw, 1) + ' °C');
     setText(el.timeVal, fmt(r.sec) + ' min');
     setText(el.donDesc, DONENESS[state.doneness].desc);
+    for (const k in MODELS) setText(el.modelTime[k], fmt(k === r.model ? r.sec : compute(k).sec) + ' min');
+    setText(el.modelDesc, MODELS[state.model].desc +
+      (state.model === 'gruber' ? ` · d = ${nf(r.d, 2)} cm aus der Schablone` : ` · m = ${nf(r.m, r.m % 1 ? 1 : 0)} g`));
     const t = state.taste;
     setText(el.tasteVal, t === 0 ? '±0 %' : (t > 0 ? '+' : '−') + Math.abs(t) + ' %');
     setText(el.tasteDesc, t === 0
@@ -1006,6 +1039,7 @@
   }
   initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; store.set('doneness', v); scheduleRender(); });
   initSegmented($('#segStart'), state.start, v => { state.start = v; store.set('start', v); scheduleRender(); });
+  initSegmented($('#segModel'), state.model, v => { state.model = v; store.set('model', v); scheduleRender(); });
 
   /* ======================= Gewicht ======================= */
   el.weight.value = state.weight;
@@ -1287,7 +1321,7 @@
     const r = compute();
     T.cfg = {
       sec: r.sec, Tw: r.Tw, taste: state.taste, key: state.doneness,
-      stages: r.stages,
+      stages: r.stages, model: MODELS[r.model].label,
       don: DONENESS[state.doneness].label,
       start: START[state.start].label + ' ' + START[state.start].T + ' °C',
       weight: state.weight, alt: state.altitude
@@ -1387,7 +1421,7 @@
     el.resetBtn.disabled = s === 'idle';
 
     const tasteChip = T.cfg.taste ? `<span>Geschmack ${T.cfg.taste > 0 ? '+' : '−'}${Math.abs(T.cfg.taste)} %</span>` : '';
-    const sum = `<span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>${tasteChip}`;
+    const sum = `<span>${T.cfg.model}</span><span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>${tasteChip}`;
     if (el.tSummary.dataset.v !== sum) { el.tSummary.innerHTML = sum; el.tSummary.dataset.v = sum; }
 
     // Schwebende Leiste unten
