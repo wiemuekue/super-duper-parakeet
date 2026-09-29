@@ -220,7 +220,6 @@
   }
   .card-model { padding: 12px 12px 12px; }
   .card-model .segmented { margin-top: 0; }
-  .card-model .seg-desc { margin-top: 8px; }
   .card-tpl { padding-top: 12px; }
   .card-tpl .template { margin-top: 0; }
   .tpl-calib {
@@ -549,7 +548,6 @@
       <button type="button" role="radio" data-value="williams">Williams<small id="modelTimeWilliams">–:––</small></button>
       <button type="button" role="radio" data-value="gruber">Gruber<small id="modelTimeGruber">–:––</small></button>
     </div>
-    <p class="seg-desc" id="modelDesc"></p>
   </section>
 
   <!-- 1:1 Schablone -->
@@ -584,7 +582,6 @@
       <div class="weight-big" aria-live="polite"><span id="weightVal">58</span><small>g</small></div>
       <div class="dims">
         <div><b id="dimsVal">56,0 × 43,0 mm</b><span class="cls" id="classBadge">M</span></div>
-        <div id="volVal">Volumen 55,9 cm³</div>
       </div>
     </div>
     <label for="weight" class="sr-only">Gewicht in Gramm</label>
@@ -609,7 +606,6 @@
       <button type="button" role="radio" data-value="medium">Wachsweich<small>cremig</small></button>
       <button type="button" role="radio" data-value="hard">Hart<small>fest</small></button>
     </div>
-    <p class="seg-desc" id="donDesc"></p>
   </section>
 
   <!-- Ausgangstemperatur -->
@@ -618,7 +614,7 @@
     <div class="segmented" id="segStart" role="radiogroup" aria-labelledby="startTitle">
       <div class="seg-thumb" aria-hidden="true"></div>
       <button type="button" role="radio" data-value="fridge">Kühlschrank<small>4 °C</small></button>
-      <button type="button" role="radio" data-value="room">Raumtemperatur<small>20 °C</small></button>
+      <button type="button" role="radio" data-value="room">Raumtemperatur<small>22 °C</small></button>
     </div>
   </section>
 
@@ -629,7 +625,7 @@
       <span class="value" id="altVal">0 m</span>
     </div>
     <label for="altitude" class="sr-only">Höhenmeter</label>
-    <input type="range" id="altitude" min="0" max="3000" step="50" value="0">
+    <input type="range" id="altitude" min="0" max="3000" step="10" value="10">
     <div class="range-labels"><span>0 m</span><span>3000 m</span></div>
     <button class="gps-btn pressable" id="gpsBtn" type="button">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.6 3.4a1 1 0 0 0-1.05-.23L3.66 9.02a1 1 0 0 0 .06 1.9l6.73 1.99 1.98 6.73a1 1 0 0 0 1.9.06l5.86-15.9a1 1 0 0 0-.23-1.05Z"/></svg>
@@ -766,22 +762,19 @@
   // Gruber-Formel (Werner Gruber): t = 0,15 · d² · ln(2 · (T_W − T_S) / (T_W − T_Z)), d = Eidurchmesser in cm, t in min
   const GRUBER = { C: 0.15, F: 2 };
   const MODELS = {
-    williams: { label: 'Williams', desc: 'Williams: Wärmeleitung nach Gewicht (m^⅔)' },
-    gruber:   { label: 'Gruber',   desc: 'Gruber: nach Eidurchmesser (d²)' }
+    williams: { label: 'Williams' },                      // nach Gewicht (m^⅔)
+    gruber:   { label: 'Gruber' }                         // nach Eidurchmesser (d²)
   };
   const DONENESS = {
     // Tz = Zieltemperatur an der Grenze Eiweiß/Eigelb
-    soft:   { label: 'Weich',      Tz: 63, note: 'Eigelb flüssig',
-              desc: 'Eiweiß gerade fest, Eigelb komplett flüssig · 63 °C am Eigelbrand' },
-    medium: { label: 'Wachsweich', Tz: 74, note: 'nur der Kern cremig',
-              desc: 'Eiweiß komplett fest, Eigelb außen gestockt, nur der Kern weich-cremig · 74 °C am Eigelbrand' },
-    hard:   { label: 'Hart',       Tz: 82, note: 'durchgegart',
-              desc: 'Eiweiß und Eigelb durchgehend fest · 82 °C am Eigelbrand' }
+    soft:   { label: 'Weich',      Tz: 63, note: 'Eigelb flüssig' },          // Eiweiß gerade fest
+    medium: { label: 'Wachsweich', Tz: 74, note: 'nur der Kern cremig' },     // Eiweiß komplett fest, Eigelb außen gestockt
+    hard:   { label: 'Hart',       Tz: 82, note: 'durchgegart' }              // Eiweiß und Eigelb durchgehend fest
   };
   const TASTE_MAX = 20;                                    // ± % Feinjustierung
   const START = {
     fridge: { label: 'Kühlschrank', T: 4 },
-    room:   { label: 'Raumtemperatur', T: 20 }
+    room:   { label: 'Raumtemperatur', T: 22 }
   };
   // iPhone 17 Pro: 460 ppi / dpr 3 = 153,33 CSS-px pro Zoll → / 25,4 = 6,037 CSS-px pro mm
   const DEFAULT_PPM = (460 / 3) / 25.4;
@@ -813,7 +806,7 @@
     doneness: store.get('doneness', 'medium'),
     start: store.get('start', 'fridge'),
     model: store.get('model', 'williams'),
-    altitude: clamp(Math.round((Number(store.get('altitude', 0)) || 0) / 50) * 50, 0, 3000),
+    altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
     taste: clamp(Math.round(Number(store.get('taste', 0)) || 0), -TASTE_MAX, TASTE_MAX),
     ppm: Number(store.get('ppm', DEFAULT_PPM))
   };
@@ -916,13 +909,12 @@
   const el = {
     template: $('#template'), svg: $('#eggSvg'), shape: $('#eggShape'), outline: $('#eggOutline'),
     clip: $('#eggClipPath'), axisV: $('#axisV'), axisH: $('#axisH'), scaleBar: $('#scaleBar'),
-    weight: $('#weight'), weightVal: $('#weightVal'), dimsVal: $('#dimsVal'), classBadge: $('#classBadge'), volVal: $('#volVal'),
+    weight: $('#weight'), weightVal: $('#weightVal'), dimsVal: $('#dimsVal'), classBadge: $('#classBadge'),
     chips: $$('.chip'), calibStatus: $('#calibStatus'),
-    donDesc: $('#donDesc'),
     altitude: $('#altitude'), altVal: $('#altVal'), gpsBtn: $('#gpsBtn'), gpsLabel: $('#gpsLabel'), gpsStatus: $('#gpsStatus'),
     boilVal: $('#boilVal'), timeVal: $('#timeVal'),
     taste: $('#taste'), tasteVal: $('#tasteVal'), tasteDesc: $('#tasteDesc'),
-    modelDesc: $('#modelDesc'), modelTime: { williams: $('#modelTimeWilliams'), gruber: $('#modelTimeGruber') },
+    modelTime: { williams: $('#modelTimeWilliams'), gruber: $('#modelTimeGruber') },
     stageName: $('#stageName'), stageNote: $('#stageNote'), stageBar: $('#stageBar'), stageCursor: $('#stageCursor'),
     stageMks: $$('.stage-mk'), stageTicks: $$('#stageTicks span'),
     bottomBar: $('#bottomBar'), bbLabel: $('#bbLabel'), bbTime: $('#bbTime'), openTimer: $('#openTimer'), ctaLabel: $('#ctaLabel'),
@@ -947,7 +939,7 @@
   }
 
   function renderEgg() {
-    const { L, B, V } = eggDims(state.weight);
+    const { L, B } = eggDims(state.weight);
     const ppm = state.ppm;
     const w = B + 2 * EGG_PAD, h = L + 2 * EGG_PAD;
     el.svg.setAttribute('viewBox', `${(-w / 2).toFixed(3)} ${(-h / 2).toFixed(3)} ${w.toFixed(3)} ${h.toFixed(3)}`);
@@ -967,7 +959,6 @@
     setText(el.weightVal, nf(w1, w1 % 1 ? 1 : 0));
     setText(el.dimsVal, `${nf(L, 1)} × ${nf(B, 1)} mm`);
     setText(el.classBadge, eggClass(w1));
-    setText(el.volVal, `Volumen ${nf(V, 1)} cm³ · ρ ${nf(PHYS.RHO, 3)} g/cm³`);
     el.chips.forEach(c => c.classList.toggle('on', Number(c.dataset.w) === w1));
     el.svg.setAttribute('aria-label', `Ei-Silhouette in Originalgröße: ${nf(L, 1)} mm hoch, ${nf(B, 1)} mm breit`);
   }
@@ -996,10 +987,7 @@
     setText(el.altVal, nf(state.altitude, 0) + ' m');
     setText(el.boilVal, nf(r.Tw, 1) + ' °C');
     setText(el.timeVal, fmt(r.sec) + ' min');
-    setText(el.donDesc, DONENESS[state.doneness].desc);
     for (const k in MODELS) setText(el.modelTime[k], fmt(k === r.model ? r.sec : compute(k).sec) + ' min');
-    setText(el.modelDesc, MODELS[state.model].desc +
-      (state.model === 'gruber' ? ` · d = ${nf(r.d, 2)} cm aus der Schablone` : ` · m = ${nf(r.m, r.m % 1 ? 1 : 0)} g`));
     const t = state.taste;
     setText(el.tasteVal, t === 0 ? '±0 %' : (t > 0 ? '+' : '−') + Math.abs(t) + ' %');
     setText(el.tasteDesc, t === 0
@@ -1111,7 +1099,7 @@
         gpsStatus('Das Gerät hat keine Höhendaten geliefert. Bitte im Freien erneut versuchen oder manuell einstellen.', true);
         return;
       }
-      const snapped = clamp(Math.round(alt / 50) * 50, 0, 3000);
+      const snapped = clamp(Math.round(alt / 10) * 10, 0, 3000);
       state.altitude = snapped;
       el.altitude.value = snapped;
       store.set('altitude', snapped);
