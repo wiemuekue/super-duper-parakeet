@@ -496,6 +496,11 @@
     padding: 12px 14px; border-radius: 16px; background: var(--fill);
     font-size: 13px; line-height: 17px; color: var(--label2);
   }
+  .t-toggle {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 12px 14px; border: 0; border-radius: 16px; background: var(--fill);
+    font-size: 13px; line-height: 17px; color: var(--label2);
+  }
   .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
   .dot.on { background: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 22%, transparent); }
 
@@ -715,8 +720,8 @@
       <button class="round-btn green pressable" id="mainBtn" type="button">Start</button>
     </div>
     <div class="t-info">
-      <div><span class="dot" id="wlDot"></span><span id="wlText">Display-Sperre: inaktiv</span></div>
-      <div><span class="dot on"></span><span>Alarm bei 00:00. Danach läuft die Zeit weiter – der Streifen zeigt, wie hart das Ei inzwischen ist.</span></div>
+      <button class="t-toggle pressable" type="button" id="wlToggle" aria-pressed="false"><span class="dot" id="wlDot"></span><span id="wlText">Display anlassen: aus</span></button>
+      <div><span class="dot on"></span><span>Läuft auch bei gesperrtem Display weiter. Der Alarm kommt über die Medienlautstärke.</span></div>
     </div>
   </div>
 </section>
@@ -808,7 +813,8 @@
     model: store.get('model', 'williams'),
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
     taste: clamp(Math.round(Number(store.get('taste', 0)) || 0), -TASTE_MAX, TASTE_MAX),
-    ppm: Number(store.get('ppm', DEFAULT_PPM))
+    ppm: Number(store.get('ppm', DEFAULT_PPM)),
+    keepAwake: store.get('keepAwake', false) === true
   };
   if (!DONENESS[state.doneness]) state.doneness = 'medium';
   if (!START[state.start]) state.start = 'fridge';
@@ -920,7 +926,7 @@
     bottomBar: $('#bottomBar'), bbLabel: $('#bbLabel'), bbTime: $('#bbTime'), openTimer: $('#openTimer'), ctaLabel: $('#ctaLabel'),
     backdrop: $('#backdrop'), app: $('#app'),
     timerSheet: $('#timerSheet'), tSummary: $('#tSummary'), ringWrap: $('#ringWrap'), ringProg: $('#ringProg'),
-    tTime: $('#tTime'), tSub: $('#tSub'), mainBtn: $('#mainBtn'), resetBtn: $('#resetBtn'), wlDot: $('#wlDot'), wlText: $('#wlText'),
+    tTime: $('#tTime'), tSub: $('#tSub'), mainBtn: $('#mainBtn'), resetBtn: $('#resetBtn'), wlDot: $('#wlDot'), wlText: $('#wlText'), wlToggle: $('#wlToggle'),
     calibSheet: $('#calibSheet'), cardFrame: $('#cardFrame'), calibRange: $('#calibRange'), calibInfo: $('#calibInfo')
   };
 
@@ -1272,7 +1278,100 @@
   }
   function stopAlarm() {
     if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = 0; }
+    bgPause();
     try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) { /* */ }
+  }
+
+  /* ======================= Hintergrund-Alarm ======================= */
+  // JavaScript wird bei gesperrtem Display angehalten, Medienwiedergabe aber nicht.
+  // Deshalb spielt beim Start eine Audiospur: Stille bis 00:00, danach ca. 1 Minute Alarm-Melodie.
+  const BG_SR = 8000, BG_REP = 2.6, BG_REPS = 22;
+  const bg = { audio: null, url: '', totalMs: 0, ok: false };
+  let iconUrl = '';
+  function buildAlarmWav(totalSec) {
+    const n = Math.ceil((totalSec + BG_REPS * BG_REP + 0.5) * BG_SR);
+    const buf = new ArrayBuffer(44 + n);
+    const v = new DataView(buf);
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE');
+    str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, BG_SR, true); v.setUint32(28, BG_SR, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    str(36, 'data'); v.setUint32(40, n, true);
+    const data = new Uint8Array(buf, 44);
+    data.fill(128);                                          // 8-Bit-PCM: 128 = Stille
+    // Eine Wiederholung der Glocken-Melodie vorberechnen (Teiltöne unter der Nyquist-Grenze von 4 kHz)
+    const L = Math.round(BG_REP * BG_SR), pat = new Float32Array(L);
+    const seq = [[0, 659.25], [0.17, 830.61], [0.34, 987.77], [0.51, 1318.51], [0.95, 987.77], [1.12, 1318.51]];
+    const partials = [[1, 1], [2, 0.32], [3, 0.12]];
+    seq.forEach(([dt, f], i) => {
+      const dur = i === seq.length - 1 ? 1.4 : 0.9, start = Math.round(dt * BG_SR);
+      partials.forEach(([mult, amp]) => {
+        const d = dur / (mult > 1 ? mult * 0.6 : 1), len = Math.min(L - start, Math.round(d * BG_SR));
+        const w = 2 * Math.PI * f * mult / BG_SR;
+        for (let j = 0; j < len; j++) {
+          const t = j / BG_SR;
+          const env = t < 0.012 ? t / 0.012 : Math.exp(-9.2 * t / d);
+          pat[start + j] += 0.28 * amp * env * Math.sin(w * j);
+        }
+      });
+    });
+    let peak = 0;
+    for (let j = 0; j < L; j++) peak = Math.max(peak, Math.abs(pat[j]));
+    const g = 0.95 / (peak || 1);
+    const bytes = new Uint8Array(L);
+    for (let j = 0; j < L; j++) bytes[j] = clamp(Math.round(128 + pat[j] * g * 127), 0, 255);
+    for (let r = 0; r < BG_REPS; r++) {
+      const off = Math.round((totalSec + r * BG_REP) * BG_SR);
+      data.set(bytes.subarray(0, Math.min(L, n - off)), off);
+    }
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  function bgAudio() {
+    if (!bg.audio) {
+      bg.audio = new Audio();
+      bg.audio.preload = 'auto';
+      bg.audio.setAttribute('playsinline', '');
+      bg.audio.addEventListener('ended', () => {
+        if (T.status === 'done') { T.status = 'over'; renderTimer(); }
+      });
+    }
+    return bg.audio;
+  }
+  // Muss aus einem Tipp heraus aufgerufen werden (iOS erlaubt Wiedergabe nur nach Nutzeraktion)
+  function bgPlayFrom(elapsedSec) {
+    try {
+      const a = bgAudio();
+      if (!bg.url || bg.totalMs !== T.totalMs) {
+        if (bg.url) URL.revokeObjectURL(bg.url);
+        bg.url = buildAlarmWav(T.totalMs / 1000);
+        bg.totalMs = T.totalMs;
+        a.src = bg.url;
+      }
+      const seek = () => { try { a.currentTime = elapsedSec; } catch (e) { /* */ } };
+      if (a.readyState >= 1) seek(); else a.addEventListener('loadedmetadata', seek, { once: true });
+      const pr = a.play();
+      bg.ok = true;
+      if (pr && pr.then) pr.then(() => { if (Math.abs(a.currentTime - elapsedSec) > 1) seek(); }).catch(() => { bg.ok = false; });
+      setMediaSession();
+    } catch (e) { bg.ok = false; }
+  }
+  function bgPause() {
+    if (bg.audio && !bg.audio.paused) bg.audio.pause();
+  }
+  function bgAlarmPlaying() {
+    return bg.ok && bg.audio && !bg.audio.paused && !bg.audio.ended;
+  }
+  function setMediaSession() {
+    if (!('mediaSession' in navigator) || !T.cfg) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Eierzeit · ' + T.cfg.don,
+        artist: 'Fertig um ' + clockTime(T.endAt),
+        artwork: iconUrl ? [{ src: iconUrl, sizes: '180x180', type: 'image/png' }] : []
+      });
+      navigator.mediaSession.setActionHandler('pause', () => { if (T.status === 'running') pauseTimer(); });
+      navigator.mediaSession.setActionHandler('play', () => { if (T.status === 'paused') startTimer(); });
+    } catch (e) { /* */ }
   }
 
   /* ======================= Wake Lock ======================= */
@@ -1290,12 +1389,25 @@
     if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
     renderWakeLock();
   }
-  function renderWakeLock() {
-    el.wlDot.classList.toggle('on', !!wakeLock);
-    setText(el.wlText, !wlSupported
-      ? 'Wake Lock nicht verfügbar – ggf. Auto-Sperre in den Einstellungen verlängern.'
-      : wakeLock ? 'Display bleibt während des Kochens eingeschaltet.' : 'Display-Sperre: inaktiv (wird beim Start aktiviert).');
+  // Display nur anlassen, wenn der Nutzer das eingeschaltet hat
+  function syncWakeLock() {
+    if (state.keepAwake && ACTIVE.includes(T.status)) acquireWakeLock(); else releaseWakeLock();
   }
+  function renderWakeLock() {
+    el.wlDot.classList.toggle('on', state.keepAwake && wlSupported);
+    el.wlToggle.setAttribute('aria-pressed', String(state.keepAwake));
+    setText(el.wlText, !wlSupported
+      ? 'Display anlassen: auf diesem Gerät nicht verfügbar'
+      : state.keepAwake ? (wakeLock ? 'Display anlassen: an – Display bleibt eingeschaltet' : 'Display anlassen: an (während der Timer läuft)')
+      : 'Display anlassen: aus – tippen zum Einschalten');
+  }
+  el.wlToggle.addEventListener('click', () => {
+    haptic(8);
+    state.keepAwake = !state.keepAwake;
+    store.set('keepAwake', state.keepAwake);
+    syncWakeLock();
+    renderWakeLock();
+  });
 
   /* ======================= Timer ======================= */
   // Zustände: idle → running ⇄ paused → done (Alarm, Zeit läuft weiter) → over (still, läuft weiter) → out (Ei raus)
@@ -1457,30 +1569,42 @@
     if (T.remainingMs <= 0) timerLoad();
     T.endAt = Date.now() + T.remainingMs;
     T.status = 'running';
-    acquireWakeLock();
+    bgPlayFrom((T.totalMs - T.remainingMs) / 1000);        // Alarm-Spur läuft auch im Hintergrund
+    syncWakeLock();
     startLoops();
     renderTimer();
   }
   function pauseTimer() {
     T.remainingMs = Math.max(0, T.endAt - Date.now());
     T.status = 'paused';
+    bgPause();
     stopLoops();
-    releaseWakeLock();
+    syncWakeLock();
     renderTimer();
   }
   function resetTimer() {
     stopLoops();
     stopAlarm();
     timerLoad();
-    releaseWakeLock();
+    syncWakeLock();
     renderTimer();
   }
   function finish() {
+    const late = Date.now() - T.endAt > (BG_REPS * BG_REP + 5) * 1000;
     T.status = 'done';
     T.remainingMs = 0;
     startLoops();                                           // Zeit läuft nach 00:00 weiter
+    if (bgAlarmPlaying()) {
+      // Die Hintergrund-Spur klingelt bereits
+    } else if (late) {
+      T.status = 'over';                                    // Alarm ist schon durchgelaufen: nur kurz erinnern
+      const c = audioCtx();
+      if (c) playMelody(c.currentTime + 0.05);
+    } else {
+      startAlarm();
+    }
+    haptic([400, 200, 400]);
     renderTimer();
-    startAlarm();
     if (openSheetEl !== el.timerSheet) openSheet(el.timerSheet);
   }
   function takeOut() {
@@ -1488,7 +1612,7 @@
     T.status = 'out';
     stopLoops();
     stopAlarm();
-    releaseWakeLock();
+    syncWakeLock();
     renderTimer();
   }
 
@@ -1508,9 +1632,11 @@
   el.openTimer.addEventListener('click', () => {
     haptic(12);
     unlockAudio();
-    if (T.status === 'idle') timerLoad();
+    const start = T.status === 'idle';
+    if (start) timerLoad();
     renderTimer();
     openSheet(el.timerSheet);
+    if (start) startTimer();                                // startet sofort und läuft herunter
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -1518,7 +1644,7 @@
     if (ACTIVE.includes(T.status)) {
       if (T.status === 'running' && T.endAt - Date.now() <= 0) finish();
       else startLoops();
-      if (!wakeLock) acquireWakeLock();
+      syncWakeLock();
     }
     if (actx && actx.state !== 'running' && T.status !== 'idle') actx.resume().catch(() => {});
     renderTimer();
@@ -1542,6 +1668,7 @@
       g.fillStyle = eg; g.fill(p);
       g.restore();
       const url = cv.toDataURL('image/png');
+      iconUrl = url;
       [['apple-touch-icon', null], ['icon', 'image/png']].forEach(([rel, type]) => {
         const l = document.createElement('link');
         l.rel = rel; if (type) l.type = type; l.href = url;
