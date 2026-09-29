@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eierzeit">
+<meta name="application-name" content="Eierzeit">
+<meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Eierzeit</title>
+<style>
+  :root {
+    --bg: #F2F2F7;
+    --card: rgba(255, 255, 255, 0.72);
+    --card-stroke: rgba(255, 255, 255, 0.65);
+    --card-highlight: rgba(255, 255, 255, 0.7);
+    --sheet: rgba(242, 242, 247, 0.86);
+    --label: #000000;
+    --label2: rgba(60, 60, 67, 0.62);
+    --label3: rgba(60, 60, 67, 0.32);
+    --sep: rgba(60, 60, 67, 0.16);
+    --fill: rgba(118, 118, 128, 0.12);
+    --fill2: rgba(118, 118, 128, 0.2);
+    --track: rgba(120, 120, 128, 0.22);
+    --seg-thumb: #FFFFFF;
+    --knob: #FFFFFF;
+    --accent: #FF9500;
+    --accent2: #FFCC00;
+    --green: #34C759;
+    --red: #FF3B30;
+    --blue: #007AFF;
+    --tpl-bg: rgba(255, 255, 255, 0.55);
+    --grid: rgba(60, 60, 67, 0.07);
+    --blob1: rgba(255, 170, 60, 0.42);
+    --blob2: rgba(255, 214, 10, 0.30);
+    --blob3: rgba(90, 200, 250, 0.22);
+    --shadow: 0 10px 34px rgba(0, 0, 0, 0.07);
+    --radius: 24px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", system-ui, "Helvetica Neue", Arial, sans-serif;
+    --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: rgba(28, 28, 30, 0.75);
+      --card-stroke: rgba(255, 255, 255, 0.08);
+      --card-highlight: rgba(255, 255, 255, 0.07);
+      --sheet: rgba(28, 28, 30, 0.88);
+      --label: #FFFFFF;
+      --label2: rgba(235, 235, 245, 0.62);
+      --label3: rgba(235, 235, 245, 0.3);
+      --sep: rgba(84, 84, 88, 0.55);
+      --fill: rgba(118, 118, 128, 0.24);
+      --fill2: rgba(118, 118, 128, 0.36);
+      --track: rgba(120, 120, 128, 0.36);
+      --seg-thumb: #636366;
+      --knob: #FFFFFF;
+      --accent: #FF9F0A;
+      --accent2: #FFD60A;
+      --green: #30D158;
+      --red: #FF453A;
+      --blue: #0A84FF;
+      --tpl-bg: rgba(44, 44, 46, 0.6);
+      --grid: rgba(235, 235, 245, 0.07);
+      --blob1: rgba(255, 140, 20, 0.28);
+      --blob2: rgba(255, 200, 0, 0.14);
+      --blob3: rgba(10, 132, 255, 0.18);
+      --shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    background: var(--bg);
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    font-family: var(--font);
+    font-size: 17px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--label);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  body.modal-open { overflow: hidden; }
+  button, input { font: inherit; color: inherit; }
+  button { touch-action: manipulation; cursor: pointer; }
+
+  /* ---------- Hintergrund (farbige Blobs, damit das Glas sichtbar ist) ---------- */
+  #bgfx {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(60% 38% at 12% 4%, var(--blob1), transparent 72%),
+      radial-gradient(55% 34% at 100% 28%, var(--blob2), transparent 72%),
+      radial-gradient(70% 42% at 0% 92%, var(--blob3), transparent 72%),
+      var(--bg);
+  }
+
+  /* ---------- App-Container ---------- */
+  #app {
+    position: relative; z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 118px);
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    transition: transform 0.5s var(--ease-sheet), opacity 0.5s var(--ease-sheet);
+    transform-origin: 50% 50%;
+  }
+  body.modal-open #app { transform: scale(0.94); opacity: 0.85; }
+
+  .nav { padding: 14px 4px 14px; }
+  .nav-sub {
+    font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--accent);
+  }
+  .nav h1 { margin: 2px 0 0; font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: 0.01em; }
+
+  /* ---------- Glas-Karten ---------- */
+  .card {
+    position: relative;
+    margin: 0 0 14px;
+    padding: 18px 16px 16px;
+    border-radius: var(--radius);
+    background: var(--card);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    backdrop-filter: blur(25px) saturate(180%);
+    border: 0.5px solid var(--card-stroke);
+    box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
+  }
+  .card h2 {
+    margin: 0; font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .hint { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--label2); }
+  .tag {
+    font-size: 12px; font-weight: 700; padding: 2px 7px; border-radius: 7px;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .value {
+    font-family: var(--font-rounded); font-weight: 600; font-variant-numeric: tabular-nums;
+    color: var(--label2); font-size: 17px;
+  }
+
+  .pressable { transition: transform 0.18s var(--ease-spring), opacity 0.18s ease, background-color 0.2s ease; }
+  .pressable:active, .pressable.is-pressed { transform: scale(0.97); opacity: 0.85; }
+
+  .icon-btn {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 12px; border: 0; border-radius: 17px;
+    background: var(--fill); color: var(--accent);
+    font-size: 13px; font-weight: 600;
+  }
+  .icon-btn svg { width: 20px; height: 20px; }
+
+  /* ---------- Schablone ---------- */
+  .template {
+    position: relative;
+    margin: 14px -4px 0;
+    border-radius: 18px;
+    background-color: var(--tpl-bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: var(--g, 30px) var(--g, 30px);
+    background-position: center center;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 0.5px var(--sep);
+  }
+  .egg { display: block; overflow: visible; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.16)); }
+  .egg-outline { stroke: var(--accent); stroke-width: 1.5; }
+  .egg-guides line { stroke: rgba(120, 90, 40, 0.3); stroke-width: 0.2; }
+  .scalebar {
+    position: absolute; left: 12px; bottom: 10px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+    font-size: 11px; font-weight: 600; color: var(--label2);
+  }
+  .scalebar i {
+    display: block; height: 6px;
+    border: 1.5px solid var(--label2); border-top: 0;
+  }
+  .tpl-badge {
+    position: absolute; right: 10px; top: 10px;
+    font-size: 11px; font-weight: 600; color: var(--label2);
+    padding: 3px 8px; border-radius: 10px; background: var(--fill);
+  }
+
+  .egg-readout { display: flex; align-items: flex-end; justify-content: space-between; margin: 14px 2px 4px; }
+  .weight-big { font-family: var(--font-rounded); font-size: 40px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .weight-big small { font-size: 20px; font-weight: 600; color: var(--label2); margin-left: 2px; }
+  .dims { text-align: right; font-size: 13px; color: var(--label2); line-height: 18px; font-variant-numeric: tabular-nums; }
+  .dims b { color: var(--label); font-weight: 600; font-size: 15px; }
+  .cls {
+    display: inline-block; min-width: 30px; text-align: center; margin-left: 6px;
+    padding: 1px 8px; border-radius: 8px; font-weight: 700; font-size: 13px;
+    color: #fff; background: var(--accent);
+  }
+
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .chip {
+    border: 0; height: 40px; border-radius: 14px; background: var(--fill);
+    font-size: 15px; font-weight: 600; color: var(--label);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+  }
+  .chip small { font-size: 11px; font-weight: 500; color: var(--label2); }
+  .chip.on { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+  .chip.on small { color: var(--accent); }
+  .calib-status { margin: 12px 2px 0; font-size: 12px; line-height: 16px; color: var(--label2); display: flex; gap: 6px; align-items: flex-start; }
+  .calib-status.warn { color: var(--red); }
+  .calib-status svg { flex: none; width: 14px; height: 14px; margin-top: 1px; }
+
+  /* ---------- iOS Slider ---------- */
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 34px; margin: 6px 0 0; padding: 0;
+    background: transparent; touch-action: pan-y;
+    --p: 0.5;
+  }
+  input[type="range"]:focus { outline: none; }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right,
+      var(--accent) 0, var(--accent) calc(14px + (100% - 28px) * var(--p)),
+      var(--track) calc(14px + (100% - 28px) * var(--p)), var(--track) 100%);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 28px; height: 28px; margin-top: -12px; border-radius: 50%;
+    background: var(--knob); border: 0;
+    box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease;
+  }
+  input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+  input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--track); }
+  input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+  input[type="range"]::-moz-range-thumb {
+    width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--knob);
+    box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
+  }
+  .range-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--label3); margin-top: -2px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Segmented Control ---------- */
+  .segmented {
+    position: relative; margin-top: 12px;
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    padding: 2px; border-radius: 9px; background: var(--fill);
+    --n: 3; --i: 0;
+  }
+  .seg-thumb {
+    position: absolute; top: 2px; bottom: 2px; left: 2px;
+    width: calc((100% - 4px) / var(--n));
+    border-radius: 7px; background: var(--seg-thumb);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+    transform: translateX(calc(var(--i) * 100%));
+    transition: transform 0.32s var(--ease-sheet);
+  }
+  .segmented button {
+    position: relative; z-index: 1;
+    height: 36px; border: 0; background: transparent; padding: 0 4px;
+    font-size: 13px; font-weight: 500; line-height: 1.1; color: var(--label);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: transform 0.18s var(--ease-spring);
+  }
+  .segmented button small { font-size: 10.5px; font-weight: 400; color: var(--label2); }
+  .segmented button.on { font-weight: 600; }
+  .segmented button:active { transform: scale(0.97); }
+  .segmented button + button::before {
+    content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 1px;
+    background: var(--sep); transition: opacity 0.2s;
+  }
+  .segmented button.on::before, .segmented button.on + button::before { opacity: 0; }
+  .seg-desc { margin: 10px 2px 0; font-size: 13px; color: var(--label2); min-height: 18px; }
+
+  /* ---------- Höhe ---------- */
+  .gps-btn {
+    width: 100%; margin-top: 10px; height: 44px; border: 0; border-radius: 14px;
+    background: var(--fill); color: var(--blue);
+    font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .gps-btn svg { width: 18px; height: 18px; }
+  .gps-btn[disabled] { opacity: 0.6; }
+  .gps-status { margin: 8px 2px 0; font-size: 12px; line-height: 16px; color: var(--label2); min-height: 16px; }
+  .gps-status.err { color: var(--red); }
+  .spinner {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid currentColor; border-right-color: transparent;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .boil { display: flex; gap: 10px; margin-top: 12px; }
+  .boil div {
+    flex: 1; padding: 10px 12px; border-radius: 14px; background: var(--fill);
+    font-size: 12px; color: var(--label2);
+  }
+  .boil b { display: block; margin-top: 2px; font-family: var(--font-rounded); font-size: 20px; color: var(--label); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Formel ---------- */
+  .formula {
+    margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--fill);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; line-height: 19px;
+    color: var(--label2); overflow-x: auto; white-space: nowrap;
+  }
+  .formula b { color: var(--label); font-weight: 600; }
+  .footnote { margin: 4px 8px 0; font-size: 12px; line-height: 17px; color: var(--label2); text-align: center; }
+
+  /* ---------- Schwebende Glas-Leiste unten ---------- */
+  .bottom-bar {
+    position: fixed; z-index: 30;
+    left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+    bottom: calc(env(safe-area-inset-bottom) + 10px);
+    max-width: 616px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 10px 10px 20px;
+    border-radius: var(--radius);
+    background: var(--card);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    backdrop-filter: blur(25px) saturate(180%);
+    border: 0.5px solid var(--card-stroke);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), inset 0 1px 0 var(--card-highlight);
+    transition: transform 0.5s var(--ease-sheet), opacity 0.4s ease;
+  }
+  body.modal-open .bottom-bar { transform: translateY(140%); opacity: 0; }
+  .bb-label { font-size: 12px; font-weight: 600; color: var(--label2); text-transform: uppercase; letter-spacing: 0.03em; }
+  .bb-time { font-family: var(--font-rounded); font-size: 30px; line-height: 1.05; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bb-time small { font-size: 15px; font-weight: 600; color: var(--label2); margin-left: 3px; }
+  .cta {
+    height: 54px; padding: 0 22px; border: 0; border-radius: 27px;
+    background: var(--accent); color: #fff;
+    font-size: 17px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .cta svg { width: 18px; height: 18px; }
+  .bottom-bar.live .bb-time { color: var(--accent); }
+  .bottom-bar.done .bb-time { color: var(--green); }
+
+  /* ---------- Sheets ---------- */
+  .backdrop {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(0, 0, 0, 0.32);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.45s var(--ease-sheet);
+    touch-action: none;
+  }
+  .backdrop.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; z-index: 50;
+    left: 0; right: 0; bottom: 0;
+    top: calc(env(safe-area-inset-top) + 12px);
+    max-width: 640px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: var(--sheet);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.22);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition: transform 0.5s var(--ease-sheet), visibility 0s linear 0.5s;
+  }
+  .sheet.open {
+    transform: translateY(0);
+    visibility: visible;
+    transition: transform 0.55s var(--ease-sheet), visibility 0s;
+  }
+  .sheet-head { flex: none; padding: 6px 12px 4px; touch-action: none; cursor: grab; }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 0 auto 6px; }
+  .sheet-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 40px; }
+  .sheet-nav h3 { margin: 0; font-size: 17px; font-weight: 600; text-align: center; }
+  .nav-btn {
+    justify-self: start; border: 0; background: transparent; color: var(--accent);
+    font-size: 17px; padding: 8px 6px; border-radius: 10px;
+  }
+  .nav-btn.strong { justify-self: end; font-weight: 600; }
+  .sheet-body {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: 6px 20px calc(env(safe-area-inset-bottom) + 20px);
+  }
+
+  /* ---------- Timer ---------- */
+  .t-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 4px 0 8px; }
+  .t-summary span {
+    font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 12px;
+    background: var(--fill); color: var(--label2);
+  }
+  .ring-wrap { position: relative; width: min(78vw, 300px); aspect-ratio: 1; margin: 18px auto 10px; }
+  .ring { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+  .ring-track { stroke: var(--fill2); }
+  .ring-prog { transition: stroke 0.4s ease; }
+  .ring-wrap.done .ring-prog { stroke: var(--green); }
+  .ring-wrap.done { animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  }
+  .t-time {
+    font-size: min(18vw, 72px); line-height: 1; font-weight: 200; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .t-sub { margin-top: 8px; font-size: 14px; color: var(--label2); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 5px; }
+  .t-sub svg { width: 14px; height: 14px; }
+  .t-buttons { display: flex; justify-content: space-between; align-items: center; max-width: 330px; margin: 18px auto 0; padding: 0 6px; }
+  .round-btn {
+    width: 86px; height: 86px; border-radius: 50%; border: 0;
+    font-size: 17px; font-weight: 500;
+    outline: 2px solid transparent; outline-offset: 3px;
+  }
+  .round-btn.gray { background: var(--fill2); color: var(--label); outline-color: var(--fill2); }
+  .round-btn.gray[disabled] { opacity: 0.45; }
+  .round-btn.green { background: color-mix(in srgb, var(--green) 22%, transparent); color: var(--green); outline-color: color-mix(in srgb, var(--green) 22%, transparent); }
+  .round-btn.orange { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); outline-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .round-btn.red { background: color-mix(in srgb, var(--red) 22%, transparent); color: var(--red); outline-color: color-mix(in srgb, var(--red) 22%, transparent); }
+  .t-info { margin: 26px auto 0; max-width: 360px; display: grid; gap: 8px; }
+  .t-info div {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: 16px; background: var(--fill);
+    font-size: 13px; line-height: 17px; color: var(--label2);
+  }
+  .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--label3); }
+  .dot.on { background: var(--green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 22%, transparent); }
+
+  /* ---------- Kalibrierung ---------- */
+  .card-frame-wrap { display: flex; justify-content: center; margin: 14px 0 10px; }
+  .card-frame {
+    position: relative; flex: none;
+    border: 2px solid var(--accent);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), color-mix(in srgb, var(--accent2) 10%, transparent));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-frame::before, .card-frame::after { content: ""; position: absolute; background: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .card-frame::before { left: 50%; top: 8px; bottom: 8px; width: 1px; }
+  .card-frame::after { top: 50%; left: 8px; right: 8px; height: 1px; }
+  .card-frame .lbl-h, .card-frame .lbl-w {
+    position: absolute; z-index: 1; font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--sheet); padding: 2px 6px; border-radius: 6px; font-variant-numeric: tabular-nums;
+  }
+  .card-frame .lbl-w { top: 10px; left: 50%; transform: translateX(-50%); }
+  .card-frame .lbl-h { top: 50%; right: 6px; transform: translateY(-50%) rotate(90deg); transform-origin: center; }
+  .card-chip { position: absolute; left: 22%; top: 16%; width: 22%; aspect-ratio: 1.3; border-radius: 4px; background: color-mix(in srgb, var(--accent2) 45%, transparent); }
+  .calib-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .step-btn {
+    flex: none; width: 44px; height: 44px; border-radius: 22px; border: 0;
+    background: var(--fill); color: var(--accent); font-size: 24px; font-weight: 500; line-height: 1;
+  }
+  .calib-info { margin-top: 8px; text-align: center; font-size: 13px; color: var(--label2); font-variant-numeric: tabular-nums; }
+  .text-btn {
+    display: block; margin: 12px auto 0; border: 0; background: transparent;
+    color: var(--accent); font-size: 15px; font-weight: 600; padding: 8px 12px; border-radius: 10px;
+  }
+  .center { text-align: center; }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div id="bgfx" aria-hidden="true"></div>
+
+<main id="app">
+  <header class="nav">
+    <div class="nav-sub">Physikalische Eieruhr</div>
+    <h1>Eierzeit</h1>
+  </header>
+
+  <!-- 1:1 Schablone -->
+  <section class="card" aria-labelledby="tplTitle">
+    <div class="card-head">
+      <div>
+        <h2 id="tplTitle">Ei-Schablone <span class="tag">1:1</span></h2>
+        <p class="hint">Lege dein Ei flach auf die Silhouette und verschiebe den Regler, bis die Umrisse exakt übereinstimmen.</p>
+      </div>
+      <button class="icon-btn pressable" id="calibBtn" type="button" aria-label="Maßstab mit Kreditkarte kalibrieren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19M6 15h4"/>
+        </svg>
+        Karte
+      </button>
+    </div>
+
+    <div class="template" id="template">
+      <svg id="eggSvg" class="egg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ei-Silhouette in Originalgröße">
+        <defs>
+          <radialGradient id="eggFill" cx="0.38" cy="0.4" r="0.78">
+            <stop offset="0" stop-color="#FFFDF8"/>
+            <stop offset="0.55" stop-color="#F6E4C6"/>
+            <stop offset="1" stop-color="#E2BF8E"/>
+          </radialGradient>
+          <clipPath id="eggClip"><path id="eggClipPath"/></clipPath>
+        </defs>
+        <path id="eggShape" fill="url(#eggFill)"/>
+        <g class="egg-guides" clip-path="url(#eggClip)">
+          <line id="axisV" stroke-dasharray="1.2 1"/>
+          <line id="axisH" stroke-dasharray="1.2 1"/>
+        </g>
+        <path id="eggOutline" class="egg-outline" fill="none" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="scalebar" aria-hidden="true"><i id="scaleBar"></i>1 cm</div>
+      <div class="tpl-badge" aria-hidden="true">Raster 5 mm</div>
+    </div>
+
+    <div class="egg-readout">
+      <div class="weight-big" aria-live="polite"><span id="weightVal">58</span><small>g</small></div>
+      <div class="dims">
+        <div><b id="dimsVal">56,0 × 43,0 mm</b><span class="cls" id="classBadge">M</span></div>
+        <div id="volVal">Volumen 55,9 cm³</div>
+      </div>
+    </div>
+    <label for="weight" class="sr-only">Gewicht in Gramm</label>
+    <input type="range" id="weight" min="45" max="85" step="0.5" value="58">
+    <div class="range-labels"><span>45 g</span><span>85 g</span></div>
+
+    <div class="chips" role="group" aria-label="Gewichtsklassen">
+      <button class="chip pressable" type="button" data-w="48">S<small>~48 g</small></button>
+      <button class="chip pressable" type="button" data-w="58">M<small>~58 g</small></button>
+      <button class="chip pressable" type="button" data-w="68">L<small>~68 g</small></button>
+      <button class="chip pressable" type="button" data-w="78">XL<small>~78 g</small></button>
+    </div>
+    <div class="calib-status" id="calibStatus"></div>
+  </section>
+
+  <!-- Härtegrad -->
+  <section class="card" aria-labelledby="donTitle">
+    <h2 id="donTitle">Härtegrad</h2>
+    <div class="segmented" id="segDoneness" role="radiogroup" aria-labelledby="donTitle">
+      <div class="seg-thumb" aria-hidden="true"></div>
+      <button type="button" role="radio" data-value="soft">Weich<small>flüssig</small></button>
+      <button type="button" role="radio" data-value="medium">Wachsweich<small>cremig</small></button>
+      <button type="button" role="radio" data-value="hard">Hart<small>fest</small></button>
+    </div>
+    <p class="seg-desc" id="donDesc"></p>
+  </section>
+
+  <!-- Ausgangstemperatur -->
+  <section class="card" aria-labelledby="startTitle">
+    <h2 id="startTitle">Ausgangstemperatur</h2>
+    <div class="segmented" id="segStart" role="radiogroup" aria-labelledby="startTitle">
+      <div class="seg-thumb" aria-hidden="true"></div>
+      <button type="button" role="radio" data-value="fridge">Kühlschrank<small>4 °C</small></button>
+      <button type="button" role="radio" data-value="room">Raumtemperatur<small>20 °C</small></button>
+    </div>
+  </section>
+
+  <!-- Höhe -->
+  <section class="card" aria-labelledby="altTitle">
+    <div class="row">
+      <h2 id="altTitle">Höhe über NN</h2>
+      <span class="value" id="altVal">0 m</span>
+    </div>
+    <label for="altitude" class="sr-only">Höhenmeter</label>
+    <input type="range" id="altitude" min="0" max="3000" step="50" value="0">
+    <div class="range-labels"><span>0 m</span><span>3000 m</span></div>
+    <button class="gps-btn pressable" id="gpsBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.6 3.4a1 1 0 0 0-1.05-.23L3.66 9.02a1 1 0 0 0 .06 1.9l6.73 1.99 1.98 6.73a1 1 0 0 0 1.9.06l5.86-15.9a1 1 0 0 0-.23-1.05Z"/></svg>
+      <span id="gpsLabel">Höhe per GPS ermitteln</span>
+    </button>
+    <div class="gps-status" id="gpsStatus" aria-live="polite"></div>
+    <div class="boil">
+      <div>Siedepunkt Wasser<b id="boilVal">100,0 °C</b></div>
+      <div>Kochzeit<b id="timeVal">–:––</b></div>
+    </div>
+  </section>
+
+  <!-- Formel -->
+  <section class="card" aria-labelledby="fTitle">
+    <h2 id="fTitle">Berechnung</h2>
+    <p class="hint">Williams-Formel für die Wärmeleitung ins Eigelb.</p>
+    <div class="formula" id="formula"></div>
+  </section>
+
+  <p class="footnote">Ei mit einem Löffel direkt ins sprudelnd kochende Wasser geben und den Timer sofort starten. Danach kurz kalt abschrecken.</p>
+</main>
+
+<!-- Schwebende Leiste -->
+<div class="bottom-bar" id="bottomBar">
+  <div>
+    <div class="bb-label" id="bbLabel">Kochzeit</div>
+    <div class="bb-time" id="bbTime">–:––<small>min</small></div>
+  </div>
+  <button class="cta pressable" id="openTimer" type="button">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l11.02-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14Z"/></svg>
+    <span id="ctaLabel">Timer</span>
+  </button>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+
+<!-- Timer-Sheet -->
+<section class="sheet" id="timerSheet" role="dialog" aria-modal="true" aria-labelledby="timerTitle" aria-hidden="true">
+  <div class="sheet-head">
+    <div class="grabber"></div>
+    <div class="sheet-nav">
+      <button class="nav-btn pressable" type="button" data-close>Schließen</button>
+      <h3 id="timerTitle">Kochtimer</h3>
+      <span></span>
+    </div>
+  </div>
+  <div class="sheet-body">
+    <div class="t-summary" id="tSummary"></div>
+    <div class="ring-wrap" id="ringWrap">
+      <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#FFD60A"/>
+            <stop offset="1" stop-color="#FF8A00"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-track" cx="150" cy="150" r="136" fill="none" stroke-width="14"/>
+        <circle class="ring-prog" id="ringProg" cx="150" cy="150" r="136" fill="none" stroke="url(#ringGrad)" stroke-width="14" stroke-linecap="round"/>
+      </svg>
+      <div class="ring-center">
+        <div class="t-time" id="tTime" role="timer" aria-live="off">00:00</div>
+        <div class="t-sub" id="tSub"></div>
+      </div>
+    </div>
+    <div class="t-buttons">
+      <button class="round-btn gray pressable" id="resetBtn" type="button">Reset</button>
+      <button class="round-btn green pressable" id="mainBtn" type="button">Start</button>
+    </div>
+    <div class="t-info">
+      <div><span class="dot" id="wlDot"></span><span id="wlText">Display-Sperre: inaktiv</span></div>
+      <div><span class="dot on"></span><span>Alarm mit Synthesizer-Klang &amp; Vibration bei 00:00. Stummschalter ggf. deaktivieren.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Kalibrierungs-Sheet -->
+<section class="sheet" id="calibSheet" role="dialog" aria-modal="true" aria-labelledby="calibTitle" aria-hidden="true">
+  <div class="sheet-head">
+    <div class="grabber"></div>
+    <div class="sheet-nav">
+      <button class="nav-btn pressable" type="button" data-close>Abbrechen</button>
+      <h3 id="calibTitle">Kalibrierung</h3>
+      <button class="nav-btn strong pressable" type="button" id="calibSave">Fertig</button>
+    </div>
+  </div>
+  <div class="sheet-body">
+    <p class="hint center">Lege eine Standard-Kreditkarte (85,60 × 53,98 mm) <b>hochkant</b> auf den Rahmen und justiere, bis die Kanten exakt deckungsgleich sind.</p>
+    <div class="card-frame-wrap">
+      <div class="card-frame" id="cardFrame">
+        <div class="card-chip"></div>
+        <span class="lbl-w">53,98 mm</span>
+        <span class="lbl-h">85,60 mm</span>
+      </div>
+    </div>
+    <div class="calib-row">
+      <button class="step-btn pressable" type="button" id="calibMinus" aria-label="Kleiner">−</button>
+      <label for="calibRange" class="sr-only">Maßstab</label>
+      <input type="range" id="calibRange" min="4.5" max="7.5" step="0.001" value="6.037">
+      <button class="step-btn pressable" type="button" id="calibPlus" aria-label="Größer">+</button>
+    </div>
+    <div class="calib-info" id="calibInfo"></div>
+    <button class="text-btn pressable" type="button" id="calibReset">Auf iPhone 17 Pro (460 ppi) zurücksetzen</button>
+  </div>
+</section>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ======================= Konstanten ======================= */
+  const PHYS = { C: 0.4385, RHO: 1.038 };                 // Williams-Konstante, Dichte g/cm³
+  const DONENESS = {
+    soft:   { label: 'Weich',      Tz: 63, desc: 'Flüssiges Eigelb, Eiweiß gerade gestockt · Kerntemperatur 63 °C' },
+    medium: { label: 'Wachsweich', Tz: 68, desc: 'Cremiges, wachsweiches Eigelb · Kerntemperatur 68 °C' },
+    hard:   { label: 'Hart',       Tz: 82, desc: 'Durchgehend festes Eigelb · Kerntemperatur 82 °C' }
+  };
+  const START = {
+    fridge: { label: 'Kühlschrank', T: 4 },
+    room:   { label: 'Raumtemperatur', T: 20 }
+  };
+  // iPhone 17 Pro: 460 ppi / dpr 3 = 153,33 CSS-px pro Zoll → / 25,4 = 6,037 CSS-px pro mm
+  const DEFAULT_PPM = (460 / 3) / 25.4;
+  const CARD = { w: 85.60, h: 53.98, r: 3.18 };           // ISO/IEC 7810 ID-1
+  const W_MIN = 45, W_MAX = 85;
+  const EGG_PAD = 1.2;                                     // mm Rand um die Silhouette im SVG
+
+  // Referenzmaße (Gewicht g → Länge L, Breite B in mm)
+  const ANCHORS = [[48, 53, 40], [58, 56, 43], [68, 60, 45], [78, 63, 47]]
+    .map(([m, L, B]) => ({ m, kL: L / Math.cbrt(m), kB: B / Math.cbrt(m) }));
+
+  /* ======================= Helfer ======================= */
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const nf = (v, d = 0) => Number(v).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pad2 = n => String(n).padStart(2, '0');
+  const fmt = sec => { sec = Math.max(0, Math.round(sec)); return pad2(Math.floor(sec / 60)) + ':' + pad2(sec % 60); };
+  const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('eierzeit.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('eierzeit.' + k, JSON.stringify(v)); } catch (e) { /* privat */ } },
+    del(k) { try { localStorage.removeItem('eierzeit.' + k); } catch (e) { /* privat */ } }
+  };
+
+  const state = {
+    weight: clamp(Number(store.get('weight', 58)) || 58, W_MIN, W_MAX),
+    doneness: store.get('doneness', 'medium'),
+    start: store.get('start', 'fridge'),
+    altitude: clamp(Math.round((Number(store.get('altitude', 0)) || 0) / 50) * 50, 0, 3000),
+    ppm: Number(store.get('ppm', DEFAULT_PPM))
+  };
+  if (!DONENESS[state.doneness]) state.doneness = 'medium';
+  if (!START[state.start]) state.start = 'fridge';
+  if (!(state.ppm >= 4.5 && state.ppm <= 7.5)) state.ppm = DEFAULT_PPM;
+
+  /* ======================= Haptik ======================= */
+  // navigator.vibrate (Android) bzw. Safari-18-Switch-Trick für iOS-Taptic-Feedback
+  const hapticLabel = (() => {
+    const l = document.createElement('label');
+    l.setAttribute('aria-hidden', 'true');
+    l.style.cssText = 'position:fixed;left:-200px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+    const i = document.createElement('input');
+    i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1;
+    l.appendChild(i);
+    document.body.appendChild(l);
+    return l;
+  })();
+  function haptic(pattern = 10) {
+    try { if (typeof navigator.vibrate === 'function' && navigator.vibrate(pattern)) return; } catch (e) { /* */ }
+    try { hapticLabel.click(); } catch (e) { /* */ }
+  }
+  // :active auf iOS aktivieren
+  document.addEventListener('touchstart', () => {}, { passive: true });
+
+  /* ======================= Ei-Geometrie ======================= */
+  // Asymmetrische Eikurve: x = sin t · (1 − k·cos t), y = −cos t  (spitzes Ende oben)
+  const EGG = (() => {
+    const N = 180, K = 0.14, pts = [];
+    let xmax = 0, yAtMax = 0;
+    for (let i = 0; i <= N; i++) {
+      const t = Math.PI * i / N;
+      const x = Math.sin(t) * (1 - K * Math.cos(t));
+      const y = -Math.cos(t);
+      if (x > xmax) { xmax = x; yAtMax = y; }
+      pts.push([x, y]);
+    }
+    return { pts: pts.map(([x, y]) => [x / xmax, y]), yAtMax };
+  })();
+
+  function eggPathD(L, B) {
+    const a = B / 2, b = L / 2, P = EGG.pts, f = v => v.toFixed(3);
+    let d = 'M0 ' + f(-b);
+    for (let i = 1; i < P.length; i++) d += 'L' + f(P[i][0] * a) + ' ' + f(P[i][1] * b);
+    for (let i = P.length - 2; i > 0; i--) d += 'L' + f(-P[i][0] * a) + ' ' + f(P[i][1] * b);
+    return d + 'Z';
+  }
+
+  // Maße aus Gewicht: Formkoeffizienten k = Maß / m^(1/3) zwischen den Referenzeiern interpoliert,
+  // außerhalb isometrisch (konstante Dichte ρ ⇒ Maße ∝ m^(1/3)) extrapoliert.
+  function eggDims(m) {
+    const A = ANCHORS;
+    let kL, kB;
+    if (m <= A[0].m) { kL = A[0].kL; kB = A[0].kB; }
+    else if (m >= A[A.length - 1].m) { kL = A[A.length - 1].kL; kB = A[A.length - 1].kB; }
+    else {
+      for (let i = 0; i < A.length - 1; i++) {
+        if (m <= A[i + 1].m) {
+          const f = (m - A[i].m) / (A[i + 1].m - A[i].m);
+          kL = A[i].kL + (A[i + 1].kL - A[i].kL) * f;
+          kB = A[i].kB + (A[i + 1].kB - A[i].kB) * f;
+          break;
+        }
+      }
+    }
+    const c = Math.cbrt(m);
+    return { L: kL * c, B: kB * c, V: m / PHYS.RHO };
+  }
+  const eggClass = m => (m < 53 ? 'S' : m < 63 ? 'M' : m < 73 ? 'L' : 'XL');
+
+  /* ======================= Physik ======================= */
+  function compute() {
+    const Tw = 100 - state.altitude / 285;
+    const Ts = START[state.start].T;
+    const Tz = DONENESS[state.doneness].Tz;
+    const m = state.weight;
+    const m23 = Math.pow(m, 2 / 3);
+    const arg = 2 * (Tw - Ts) / (Tw - Tz);
+    const tMin = PHYS.C * m23 * Math.log(arg);
+    return { Tw, Ts, Tz, m, m23, arg, tMin, sec: Math.max(1, Math.round(tMin * 60)) };
+  }
+
+  /* ======================= DOM ======================= */
+  const el = {
+    template: $('#template'), svg: $('#eggSvg'), shape: $('#eggShape'), outline: $('#eggOutline'),
+    clip: $('#eggClipPath'), axisV: $('#axisV'), axisH: $('#axisH'), scaleBar: $('#scaleBar'),
+    weight: $('#weight'), weightVal: $('#weightVal'), dimsVal: $('#dimsVal'), classBadge: $('#classBadge'), volVal: $('#volVal'),
+    chips: $$('.chip'), calibStatus: $('#calibStatus'),
+    donDesc: $('#donDesc'),
+    altitude: $('#altitude'), altVal: $('#altVal'), gpsBtn: $('#gpsBtn'), gpsLabel: $('#gpsLabel'), gpsStatus: $('#gpsStatus'),
+    boilVal: $('#boilVal'), timeVal: $('#timeVal'), formula: $('#formula'),
+    bottomBar: $('#bottomBar'), bbLabel: $('#bbLabel'), bbTime: $('#bbTime'), openTimer: $('#openTimer'), ctaLabel: $('#ctaLabel'),
+    backdrop: $('#backdrop'), app: $('#app'),
+    timerSheet: $('#timerSheet'), tSummary: $('#tSummary'), ringWrap: $('#ringWrap'), ringProg: $('#ringProg'),
+    tTime: $('#tTime'), tSub: $('#tSub'), mainBtn: $('#mainBtn'), resetBtn: $('#resetBtn'), wlDot: $('#wlDot'), wlText: $('#wlText'),
+    calibSheet: $('#calibSheet'), cardFrame: $('#cardFrame'), calibRange: $('#calibRange'), calibInfo: $('#calibInfo')
+  };
+
+  function paintRange(r) {
+    const p = (Number(r.value) - Number(r.min)) / (Number(r.max) - Number(r.min));
+    r.style.setProperty('--p', clamp(p, 0, 1).toFixed(4));
+  }
+
+  /* ======================= Schablone rendern ======================= */
+  function layoutTemplate() {
+    const ppm = state.ppm;
+    const maxL = eggDims(W_MAX).L;
+    el.template.style.height = Math.round((maxL + 2 * EGG_PAD + 10) * ppm) + 'px';
+    el.template.style.setProperty('--g', (5 * ppm).toFixed(3) + 'px');
+    el.scaleBar.style.width = (10 * ppm).toFixed(3) + 'px';
+  }
+
+  function renderEgg() {
+    const { L, B, V } = eggDims(state.weight);
+    const ppm = state.ppm;
+    const w = B + 2 * EGG_PAD, h = L + 2 * EGG_PAD;
+    el.svg.setAttribute('viewBox', `${(-w / 2).toFixed(3)} ${(-h / 2).toFixed(3)} ${w.toFixed(3)} ${h.toFixed(3)}`);
+    el.svg.style.width = (w * ppm).toFixed(3) + 'px';
+    el.svg.style.height = (h * ppm).toFixed(3) + 'px';
+    const d = eggPathD(L, B);
+    el.shape.setAttribute('d', d);
+    el.outline.setAttribute('d', d);
+    el.clip.setAttribute('d', d);
+    const yW = EGG.yAtMax * L / 2;
+    el.axisV.setAttribute('x1', 0); el.axisV.setAttribute('x2', 0);
+    el.axisV.setAttribute('y1', (-L / 2).toFixed(3)); el.axisV.setAttribute('y2', (L / 2).toFixed(3));
+    el.axisH.setAttribute('x1', (-B / 2).toFixed(3)); el.axisH.setAttribute('x2', (B / 2).toFixed(3));
+    el.axisH.setAttribute('y1', yW.toFixed(3)); el.axisH.setAttribute('y2', yW.toFixed(3));
+
+    const w1 = state.weight;
+    setText(el.weightVal, nf(w1, w1 % 1 ? 1 : 0));
+    setText(el.dimsVal, `${nf(L, 1)} × ${nf(B, 1)} mm`);
+    setText(el.classBadge, eggClass(w1));
+    setText(el.volVal, `Volumen ${nf(V, 1)} cm³ · ρ ${nf(PHYS.RHO, 3)} g/cm³`);
+    el.chips.forEach(c => c.classList.toggle('on', Number(c.dataset.w) === w1));
+    el.svg.setAttribute('aria-label', `Ei-Silhouette in Originalgröße: ${nf(L, 1)} mm hoch, ${nf(B, 1)} mm breit`);
+  }
+
+  function renderCalibStatus() {
+    const custom = Math.abs(state.ppm - DEFAULT_PPM) > 0.0005;
+    const shortSide = Math.min(screen.width, screen.height);
+    const isPro = shortSide === 402 && Math.round(window.devicePixelRatio || 1) === 3;
+    const info = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>';
+    let text, warn = false;
+    if (custom) {
+      text = `Maßstab individuell kalibriert: ${nf(state.ppm, 3)} px/mm (≈ ${nf(state.ppm * 25.4 * (window.devicePixelRatio || 1), 0)} ppi).`;
+    } else if (isPro) {
+      text = `Kalibriert für iPhone 17 Pro: 460 ppi · dpr 3 · ${nf(DEFAULT_PPM, 3)} px/mm.`;
+    } else {
+      warn = true;
+      text = 'Dieses Display weicht vom iPhone 17 Pro ab – bitte mit einer Kreditkarte kalibrieren („Karte“).';
+    }
+    el.calibStatus.classList.toggle('warn', warn);
+    el.calibStatus.innerHTML = info + '<span></span>';
+    el.calibStatus.lastChild.textContent = text;
+  }
+
+  /* ======================= Ergebnis rendern ======================= */
+  function renderResult() {
+    const r = compute();
+    setText(el.altVal, nf(state.altitude, 0) + ' m');
+    setText(el.boilVal, nf(r.Tw, 1) + ' °C');
+    setText(el.timeVal, fmt(r.sec) + ' min');
+    setText(el.donDesc, DONENESS[state.doneness].desc);
+    el.formula.innerHTML =
+      `t = c · m<sup>2/3</sup> · ln(2·(T<sub>W</sub>−T<sub>S</sub>)/(T<sub>W</sub>−T<sub>Z</sub>))<br>` +
+      `t = ${nf(PHYS.C, 4)} · ${nf(r.m, 1)}<sup>2/3</sup> · ln(2·(${nf(r.Tw, 2)}−${r.Ts})/(${nf(r.Tw, 2)}−${r.Tz}))<br>` +
+      `t = ${nf(PHYS.C, 4)} · ${nf(r.m23, 3)} · ln(${nf(r.arg, 3)})<br>` +
+      `t = <b>${nf(r.tMin, 2)} min</b> ≙ <b>${fmt(r.sec)}</b>`;
+    return r;
+  }
+
+  let rafPending = false;
+  function scheduleRender() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; renderAll(); });
+  }
+  function renderAll() {
+    paintRange(el.weight);
+    paintRange(el.altitude);
+    renderEgg();
+    renderResult();
+    if (T.status === 'idle') timerLoad();
+    renderTimer();
+  }
+
+  /* ======================= Segmented Controls ======================= */
+  function initSegmented(root, value, onChange) {
+    const btns = $$('button', root);
+    root.style.setProperty('--n', btns.length);
+    const set = (v, fromUser) => {
+      const i = Math.max(0, btns.findIndex(b => b.dataset.value === v));
+      root.style.setProperty('--i', i);
+      btns.forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-checked', String(j === i)); });
+      if (fromUser) { haptic(8); onChange(btns[i].dataset.value); }
+    };
+    btns.forEach(b => b.addEventListener('click', () => set(b.dataset.value, true)));
+    set(value, false);
+  }
+  initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; store.set('doneness', v); scheduleRender(); });
+  initSegmented($('#segStart'), state.start, v => { state.start = v; store.set('start', v); scheduleRender(); });
+
+  /* ======================= Gewicht ======================= */
+  el.weight.value = state.weight;
+  let lastClass = eggClass(state.weight);
+  el.weight.addEventListener('input', () => {
+    state.weight = clamp(Number(el.weight.value), W_MIN, W_MAX);
+    const c = eggClass(state.weight);
+    if (c !== lastClass) { lastClass = c; haptic(6); }
+    scheduleRender();
+  });
+  el.weight.addEventListener('change', () => store.set('weight', state.weight));
+  el.chips.forEach(c => c.addEventListener('click', () => {
+    haptic(8);
+    state.weight = Number(c.dataset.w);
+    lastClass = eggClass(state.weight);
+    el.weight.value = state.weight;
+    store.set('weight', state.weight);
+    scheduleRender();
+  }));
+
+  /* ======================= Höhe & GPS ======================= */
+  el.altitude.value = state.altitude;
+  el.altitude.addEventListener('input', () => { state.altitude = Number(el.altitude.value); scheduleRender(); });
+  el.altitude.addEventListener('change', () => { store.set('altitude', state.altitude); haptic(5); });
+
+  function gpsStatus(msg, err) {
+    el.gpsStatus.textContent = msg;
+    el.gpsStatus.classList.toggle('err', !!err);
+  }
+  function gpsBusy(busy) {
+    el.gpsBtn.disabled = busy;
+    const icon = el.gpsBtn.firstElementChild;
+    if (busy) {
+      icon.style.display = 'none';
+      if (!$('.spinner', el.gpsBtn)) { const s = document.createElement('span'); s.className = 'spinner'; el.gpsBtn.insertBefore(s, el.gpsLabel); }
+      el.gpsLabel.textContent = 'Ermittle Höhe …';
+    } else {
+      icon.style.display = '';
+      const s = $('.spinner', el.gpsBtn); if (s) s.remove();
+      el.gpsLabel.textContent = 'Höhe per GPS ermitteln';
+    }
+  }
+  el.gpsBtn.addEventListener('click', () => {
+    haptic(10);
+    if (!('geolocation' in navigator)) { gpsStatus('Standortdienste werden von diesem Browser nicht unterstützt.', true); return; }
+    if (!window.isSecureContext) { gpsStatus('GPS benötigt eine sichere Verbindung (HTTPS).', true); return; }
+    gpsBusy(true);
+    gpsStatus('Warte auf GPS-Signal …');
+    navigator.geolocation.getCurrentPosition(pos => {
+      gpsBusy(false);
+      const alt = pos.coords.altitude;
+      if (alt === null || alt === undefined || !isFinite(alt)) {
+        gpsStatus('Das Gerät hat keine Höhendaten geliefert. Bitte im Freien erneut versuchen oder manuell einstellen.', true);
+        return;
+      }
+      const snapped = clamp(Math.round(alt / 50) * 50, 0, 3000);
+      state.altitude = snapped;
+      el.altitude.value = snapped;
+      store.set('altitude', snapped);
+      const acc = pos.coords.altitudeAccuracy;
+      gpsStatus(`GPS: ${nf(alt, 0)} m${acc ? ' (±' + nf(acc, 0) + ' m)' : ''} → eingestellt auf ${nf(snapped, 0)} m.`);
+      haptic([10, 40, 10]);
+      scheduleRender();
+    }, err => {
+      gpsBusy(false);
+      const msg = {
+        1: 'Standortzugriff verweigert. Erlaube ihn unter Einstellungen › Datenschutz › Ortungsdienste.',
+        2: 'Position nicht verfügbar. Bitte später erneut versuchen.',
+        3: 'Zeitüberschreitung beim GPS-Empfang. Bitte erneut versuchen.'
+      }[err.code] || 'Standort konnte nicht ermittelt werden.';
+      gpsStatus(msg, true);
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  });
+
+  /* ======================= Sheets ======================= */
+  let openSheetEl = null;
+  function openSheet(sheet) {
+    if (openSheetEl === sheet) return;
+    if (openSheetEl) closeSheet(true);
+    el.app.style.transformOrigin = `50% ${Math.round(window.scrollY + window.innerHeight / 2)}px`;
+    document.body.classList.add('modal-open');
+    el.backdrop.classList.add('show');
+    sheet.classList.add('open');
+    sheet.setAttribute('aria-hidden', 'false');
+    openSheetEl = sheet;
+  }
+  function closeSheet(keepBackdrop) {
+    const sheet = openSheetEl;
+    if (!sheet) return;
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+    openSheetEl = null;
+    if (sheet === el.calibSheet) renderCalibStatus();
+    if (!keepBackdrop) {
+      document.body.classList.remove('modal-open');
+      el.backdrop.classList.remove('show');
+    }
+  }
+  el.backdrop.addEventListener('click', () => { haptic(6); closeSheet(); });
+  $$('[data-close]').forEach(b => b.addEventListener('click', () => { haptic(8); closeSheet(); }));
+
+  // Wisch-Geste nach unten zum Schließen
+  function enableSheetDrag(sheet) {
+    const handle = $('.sheet-head', sheet);
+    let y0 = 0, dy = 0, t0 = 0, dragging = false;
+    handle.addEventListener('pointerdown', e => {
+      if (e.target.closest('button')) return;
+      dragging = true; y0 = e.clientY; dy = 0; t0 = performance.now();
+      sheet.style.transition = 'none';
+      try { handle.setPointerCapture(e.pointerId); } catch (_) { /* */ }
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const raw = e.clientY - y0;
+      dy = raw > 0 ? raw : raw / 6;                          // leichter Gummiband-Effekt nach oben
+      sheet.style.transform = `translateY(${dy}px)`;
+    });
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      const v = dy / Math.max(1, performance.now() - t0);
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+      if (dy > 130 || (dy > 30 && v > 0.6)) { haptic(8); closeSheet(); }
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+  }
+  enableSheetDrag(el.timerSheet);
+  enableSheetDrag(el.calibSheet);
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+  /* ======================= Kalibrierung ======================= */
+  let tempPpm = state.ppm;
+  function renderCardFrame() {
+    const f = el.cardFrame;
+    f.style.width = (CARD.h * tempPpm).toFixed(3) + 'px';
+    f.style.height = (CARD.w * tempPpm).toFixed(3) + 'px';
+    f.style.borderRadius = (CARD.r * tempPpm).toFixed(3) + 'px';
+    el.calibRange.value = tempPpm;
+    paintRange(el.calibRange);
+    const dpr = window.devicePixelRatio || 1;
+    el.calibInfo.textContent = `${nf(tempPpm, 3)} CSS-px/mm · ${nf(tempPpm * 25.4, 2)} CSS-px/Zoll · ≈ ${nf(tempPpm * 25.4 * dpr, 0)} ppi`;
+  }
+  $('#calibBtn').addEventListener('click', () => {
+    haptic(10);
+    tempPpm = state.ppm;
+    renderCardFrame();
+    openSheet(el.calibSheet);
+  });
+  el.calibRange.addEventListener('input', () => { tempPpm = Number(el.calibRange.value); renderCardFrame(); });
+  const nudge = d => { haptic(5); tempPpm = clamp(Math.round((tempPpm + d) * 1000) / 1000, 4.5, 7.5); renderCardFrame(); };
+  $('#calibMinus').addEventListener('click', () => nudge(-0.005));
+  $('#calibPlus').addEventListener('click', () => nudge(0.005));
+  $('#calibReset').addEventListener('click', () => { haptic(10); tempPpm = DEFAULT_PPM; renderCardFrame(); });
+  $('#calibSave').addEventListener('click', () => {
+    haptic([10, 40, 10]);
+    state.ppm = tempPpm;
+    if (Math.abs(state.ppm - DEFAULT_PPM) < 0.0005) store.del('ppm'); else store.set('ppm', state.ppm);
+    layoutTemplate();
+    renderEgg();
+    closeSheet();
+  });
+
+  /* ======================= Audio (Web Audio Synth) ======================= */
+  let actx = null, master = null, alarmTimer = 0, alarmReps = 0;
+  function audioCtx() {
+    if (!actx) {
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* */ }
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      actx = new AC();
+      const comp = actx.createDynamicsCompressor();
+      comp.threshold.value = -12; comp.knee.value = 12; comp.ratio.value = 4;
+      master = actx.createGain();
+      master.gain.value = 0.9;
+      master.connect(comp).connect(actx.destination);
+    }
+    if (actx.state === 'suspended') actx.resume().catch(() => {});
+    return actx;
+  }
+  function unlockAudio() {
+    const c = audioCtx();
+    if (!c) return;
+    const b = c.createBuffer(1, 1, 22050);
+    const s = c.createBufferSource();
+    s.buffer = b; s.connect(c.destination); s.start(0);
+  }
+  // Glockenartiger Ton aus Sinus-Partialtönen mit exponentiellem Ausklingen
+  function bell(c, freq, t0, dur, vol) {
+    const partials = [[1, 1], [2, 0.32], [3, 0.12], [4.16, 0.05]];
+    partials.forEach(([mult, amp]) => {
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq * mult, t0);
+      const end = t0 + dur / (mult > 1 ? mult * 0.6 : 1);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * amp), t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+      o.connect(g).connect(master);
+      o.start(t0);
+      o.stop(end + 0.05);
+    });
+  }
+  function playMelody(t) {
+    const c = audioCtx();
+    if (!c) return;
+    const E5 = 659.25, Gs5 = 830.61, B5 = 987.77, E6 = 1318.51;
+    const seq = [[0, E5], [0.17, Gs5], [0.34, B5], [0.51, E6], [0.95, B5], [1.12, E6]];
+    seq.forEach(([dt, f], i) => bell(c, f, t + dt, i === seq.length - 1 ? 1.4 : 0.9, 0.28));
+  }
+  function startAlarm() {
+    stopAlarm();
+    alarmReps = 0;
+    const play = () => {
+      if (alarmReps++ >= 24) { stopAlarm(); releaseWakeLock(); return; }
+      const c = audioCtx();
+      if (c) playMelody(c.currentTime + 0.05);
+      try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 800]); } catch (e) { /* */ }
+    };
+    play();
+    alarmTimer = setInterval(play, 2600);
+  }
+  function stopAlarm() {
+    if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = 0; }
+    try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) { /* */ }
+  }
+
+  /* ======================= Wake Lock ======================= */
+  let wakeLock = null;
+  const wlSupported = 'wakeLock' in navigator;
+  async function acquireWakeLock() {
+    if (!wlSupported || wakeLock || document.visibilityState !== 'visible') { renderWakeLock(); return; }
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; renderWakeLock(); });
+    } catch (e) { wakeLock = null; }
+    renderWakeLock();
+  }
+  function releaseWakeLock() {
+    if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+    renderWakeLock();
+  }
+  function renderWakeLock() {
+    el.wlDot.classList.toggle('on', !!wakeLock);
+    setText(el.wlText, !wlSupported
+      ? 'Wake Lock nicht verfügbar – ggf. Auto-Sperre in den Einstellungen verlängern.'
+      : wakeLock ? 'Display bleibt während des Kochens eingeschaltet.' : 'Display-Sperre: inaktiv (wird beim Start aktiviert).');
+  }
+
+  /* ======================= Timer ======================= */
+  const RING_C = 2 * Math.PI * 136;
+  el.ringProg.style.strokeDasharray = RING_C.toFixed(2);
+  const T = { status: 'idle', totalMs: 0, remainingMs: 0, endAt: 0, raf: 0, iv: 0, cfg: null };
+
+  function timerLoad() {
+    const r = compute();
+    T.cfg = {
+      sec: r.sec, Tw: r.Tw,
+      don: DONENESS[state.doneness].label,
+      start: START[state.start].label + ' ' + START[state.start].T + ' °C',
+      weight: state.weight, alt: state.altitude
+    };
+    T.totalMs = r.sec * 1000;
+    T.remainingMs = T.totalMs;
+    T.status = 'idle';
+  }
+  function remaining() {
+    return T.status === 'running' ? Math.max(0, T.endAt - Date.now()) : T.remainingMs;
+  }
+  function clockTime(ts) { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+  function renderTimer() {
+    const rem = remaining();
+    const frac = T.totalMs ? rem / T.totalMs : 0;
+    const secLeft = Math.ceil(rem / 1000);
+    const done = T.status === 'done';
+
+    el.ringProg.style.strokeDashoffset = done ? '0' : (RING_C * (1 - frac)).toFixed(2);
+    el.ringWrap.classList.toggle('done', done);
+    setText(el.tTime, done ? '00:00' : fmt(secLeft));
+
+    const bellIcon = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>';
+    let sub;
+    if (T.status === 'running') sub = bellIcon + '<span>fertig um ' + clockTime(T.endAt) + '</span>';
+    else if (T.status === 'paused') sub = '<span>Pausiert · von ' + fmt(T.totalMs / 1000) + '</span>';
+    else if (done) sub = '<span>Fertig! Ei abschrecken 🥚</span>';
+    else sub = '<span>Gesamt ' + fmt(T.totalMs / 1000) + ' min</span>';
+    if (el.tSub.dataset.v !== sub) { el.tSub.innerHTML = sub; el.tSub.dataset.v = sub; }
+
+    const mb = el.mainBtn;
+    const [label, cls] = {
+      idle: ['Start', 'green'], running: ['Pause', 'orange'], paused: ['Weiter', 'green'], done: ['Stopp', 'red']
+    }[T.status];
+    setText(mb, label);
+    if (mb.dataset.cls !== cls) { mb.classList.remove('green', 'orange', 'red'); mb.classList.add(cls); mb.dataset.cls = cls; }
+    el.resetBtn.disabled = T.status === 'idle';
+
+    if (T.cfg) {
+      const s = `<span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>`;
+      if (el.tSummary.dataset.v !== s) { el.tSummary.innerHTML = s; el.tSummary.dataset.v = s; }
+    }
+
+    // Leiste unten
+    const live = T.status !== 'idle';
+    el.bottomBar.classList.toggle('live', T.status === 'running' || T.status === 'paused');
+    el.bottomBar.classList.toggle('done', done);
+    setText(el.bbLabel, { idle: 'Kochzeit', running: 'Timer läuft', paused: 'Pausiert', done: 'Fertig!' }[T.status]);
+    const bbt = (live ? fmt(done ? 0 : secLeft) : fmt(compute().sec)) + '|min';
+    if (el.bbTime.dataset.v !== bbt) {
+      const [a, b] = bbt.split('|');
+      el.bbTime.innerHTML = a + '<small>' + b + '</small>';
+      el.bbTime.dataset.v = bbt;
+    }
+    setText(el.ctaLabel, live ? 'Öffnen' : 'Timer');
+
+    const title = T.status === 'running' ? '⏱ ' + fmt(secLeft) + ' · Eierzeit' : done ? '🔔 Fertig · Eierzeit' : 'Eierzeit';
+    if (document.title !== title) document.title = title;
+  }
+
+  function loop() {
+    if (T.status !== 'running') return;
+    if (T.endAt - Date.now() <= 0) { finish(); return; }
+    renderTimer();
+    T.raf = requestAnimationFrame(loop);
+  }
+  function stopLoops() {
+    if (T.raf) { cancelAnimationFrame(T.raf); T.raf = 0; }
+    if (T.iv) { clearInterval(T.iv); T.iv = 0; }
+  }
+  function startTimer() {
+    unlockAudio();
+    if (T.remainingMs <= 0) timerLoad();
+    T.endAt = Date.now() + T.remainingMs;
+    T.status = 'running';
+    acquireWakeLock();
+    stopLoops();
+    T.raf = requestAnimationFrame(loop);
+    // Fallback, falls rAF gedrosselt wird
+    T.iv = setInterval(() => { if (T.status === 'running' && T.endAt - Date.now() <= 0) finish(); }, 250);
+    renderTimer();
+  }
+  function pauseTimer() {
+    T.remainingMs = Math.max(0, T.endAt - Date.now());
+    T.status = 'paused';
+    stopLoops();
+    releaseWakeLock();
+    renderTimer();
+  }
+  function resetTimer() {
+    stopLoops();
+    stopAlarm();
+    timerLoad();
+    releaseWakeLock();
+    renderTimer();
+  }
+  function finish() {
+    stopLoops();
+    T.status = 'done';
+    T.remainingMs = 0;
+    renderTimer();
+    startAlarm();
+    if (openSheetEl !== el.timerSheet) openSheet(el.timerSheet);
+  }
+
+  el.mainBtn.addEventListener('click', () => {
+    haptic(15);
+    unlockAudio();
+    switch (T.status) {
+      case 'idle':
+      case 'paused': startTimer(); break;
+      case 'running': pauseTimer(); break;
+      case 'done': resetTimer(); break;
+    }
+  });
+  el.resetBtn.addEventListener('click', () => { haptic([8, 30, 8]); resetTimer(); });
+  el.openTimer.addEventListener('click', () => {
+    haptic(12);
+    unlockAudio();
+    if (T.status === 'idle') timerLoad();
+    renderTimer();
+    openSheet(el.timerSheet);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (T.status === 'running') {
+      if (T.endAt - Date.now() <= 0) finish();
+      else { stopLoops(); T.raf = requestAnimationFrame(loop); T.iv = setInterval(() => { if (T.status === 'running' && T.endAt - Date.now() <= 0) finish(); }, 250); }
+    }
+    if ((T.status === 'running' || (T.status === 'done' && alarmTimer)) && !wakeLock) acquireWakeLock();
+    if (actx && actx.state !== 'running' && T.status !== 'idle') actx.resume().catch(() => {});
+    renderTimer();
+  });
+
+  /* ======================= Home-Bildschirm-Icon ======================= */
+  (function makeTouchIcon() {
+    try {
+      const s = 180, cv = document.createElement('canvas');
+      cv.width = cv.height = s;
+      const g = cv.getContext('2d');
+      const bg = g.createLinearGradient(0, 0, 0, s);
+      bg.addColorStop(0, '#FFB340'); bg.addColorStop(1, '#FF7A00');
+      g.fillStyle = bg; g.fillRect(0, 0, s, s);
+      const p = new Path2D(eggPathD(118, 90));
+      g.save();
+      g.translate(s / 2, s / 2 + 3);
+      g.shadowColor = 'rgba(0,0,0,0.28)'; g.shadowBlur = 14; g.shadowOffsetY = 6;
+      const eg = g.createRadialGradient(-16, -18, 6, 0, 0, 78);
+      eg.addColorStop(0, '#FFFFFF'); eg.addColorStop(0.6, '#F8E8CC'); eg.addColorStop(1, '#E9CA9A');
+      g.fillStyle = eg; g.fill(p);
+      g.restore();
+      const url = cv.toDataURL('image/png');
+      [['apple-touch-icon', null], ['icon', 'image/png']].forEach(([rel, type]) => {
+        const l = document.createElement('link');
+        l.rel = rel; if (type) l.type = type; l.href = url;
+        document.head.appendChild(l);
+      });
+    } catch (e) { /* */ }
+  })();
+
+  /* ======================= Start ======================= */
+  layoutTemplate();
+  renderCalibStatus();
+  renderWakeLock();
+  timerLoad();
+  renderAll();
+  window.addEventListener('resize', renderCalibStatus);
+})();
+</script>
+</body>
+</html>
