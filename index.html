@@ -147,7 +147,7 @@
     position: relative; z-index: 1;
     max-width: 640px;
     margin: 0 auto;
-    padding-top: calc(env(safe-area-inset-top) + 12px);
+    padding-top: calc(env(safe-area-inset-top) + 8px);
     padding-bottom: calc(env(safe-area-inset-bottom) + 118px);
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
@@ -218,9 +218,10 @@
     display: block; height: 6px;
     border: 1.5px solid var(--label2); border-top: 0;
   }
-  .card-model { padding: 12px 12px 12px; }
+  .card-model { padding: 6px; margin-bottom: 10px; border-radius: 18px; }
   .card-model .segmented { margin-top: 0; }
-  .card-tpl { padding-top: 12px; }
+  .card-tpl { padding: 8px 10px 12px; }
+  .card-tpl input[type="range"] { margin-top: 4px; }
   .card-tpl .template { margin-top: 0; }
   .tpl-calib {
     position: absolute; right: 10px; top: 10px; height: 30px; padding: 0 10px;
@@ -229,9 +230,9 @@
   }
   .tpl-calib svg { width: 18px; height: 18px; }
 
-  .egg-readout { display: flex; align-items: flex-end; justify-content: space-between; margin: 14px 2px 4px; }
-  .weight-big { font-family: var(--font-rounded); font-size: 40px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .weight-big small { font-size: 20px; font-weight: 600; color: var(--label2); margin-left: 2px; }
+  .egg-readout { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 4px; }
+  .weight-big { font-family: var(--font-rounded); font-size: 30px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .weight-big small { font-size: 17px; font-weight: 600; color: var(--label2); margin-left: 2px; }
   .dims { text-align: right; font-size: 13px; color: var(--label2); line-height: 18px; font-variant-numeric: tabular-nums; }
   .dims b { color: var(--label); font-weight: 600; font-size: 15px; }
   .cls {
@@ -583,15 +584,13 @@
       </button>
     </div>
 
-    <div class="egg-readout">
-      <div class="weight-big" aria-live="polite"><span id="weightVal">58</span><small>g</small></div>
-      <div class="dims">
-        <div><b id="dimsVal">56,0 × 43,0 mm</b><span class="cls" id="classBadge">M</span></div>
-      </div>
-    </div>
+    <!-- Regler direkt unter dem Ei, damit er ohne Scrollen erreichbar ist -->
     <label for="weight" class="sr-only">Gewicht in Gramm</label>
     <input type="range" id="weight" min="45" max="85" step="0.5" value="58">
-    <div class="range-labels"><span>45 g</span><span>85 g</span></div>
+    <div class="egg-readout">
+      <div class="weight-big" aria-live="polite"><span id="weightVal">58</span><small>g</small></div>
+      <div class="dims"><b id="dimsVal">56,0 × 43,0 mm</b><span class="cls" id="classBadge">M</span></div>
+    </div>
 
     <div class="chips" role="group" aria-label="Gewichtsklassen">
       <button class="chip pressable" type="button" data-w="48">S<small>~48 g</small></button>
@@ -939,7 +938,7 @@
   function layoutTemplate() {
     const ppm = state.ppm;
     const maxL = eggDims(W_MAX).L;
-    el.template.style.height = Math.round((maxL + 2 * EGG_PAD + 10) * ppm) + 'px';
+    el.template.style.height = Math.ceil((maxL + 2 * EGG_PAD) * ppm) + 'px';
     el.template.style.setProperty('--g', (5 * ppm).toFixed(3) + 'px');
     el.scaleBar.style.width = (10 * ppm).toFixed(3) + 'px';
   }
