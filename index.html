@@ -19,7 +19,9 @@
     --card: rgba(255, 255, 255, 0.72);
     --card-stroke: rgba(255, 255, 255, 0.65);
     --card-highlight: rgba(255, 255, 255, 0.7);
-    --sheet: rgba(242, 242, 247, 0.86);
+    --bar: rgba(249, 249, 251, 0.97);
+    --bar-stroke: rgba(60, 60, 67, 0.14);
+    --sheet: rgba(242, 242, 247, 0.96);
     --label: #000000;
     --label2: rgba(60, 60, 67, 0.62);
     --label3: rgba(60, 60, 67, 0.32);
@@ -52,7 +54,9 @@
       --card: rgba(28, 28, 30, 0.75);
       --card-stroke: rgba(255, 255, 255, 0.08);
       --card-highlight: rgba(255, 255, 255, 0.07);
-      --sheet: rgba(28, 28, 30, 0.88);
+      --bar: rgba(28, 28, 30, 0.97);
+      --bar-stroke: rgba(255, 255, 255, 0.1);
+      --sheet: rgba(28, 28, 30, 0.96);
       --label: #FFFFFF;
       --label2: rgba(235, 235, 245, 0.62);
       --label3: rgba(235, 235, 245, 0.3);
@@ -81,7 +85,9 @@
     --card: rgba(28, 28, 30, 0.75);
     --card-stroke: rgba(255, 255, 255, 0.08);
     --card-highlight: rgba(255, 255, 255, 0.07);
-    --sheet: rgba(28, 28, 30, 0.88);
+    --bar: rgba(28, 28, 30, 0.97);
+    --bar-stroke: rgba(255, 255, 255, 0.1);
+    --sheet: rgba(28, 28, 30, 0.96);
     --label: #FFFFFF;
     --label2: rgba(235, 235, 245, 0.62);
     --label3: rgba(235, 235, 245, 0.3);
@@ -148,7 +154,7 @@
     max-width: 640px;
     margin: 0 auto;
     padding-top: calc(env(safe-area-inset-top) + 8px);
-    padding-bottom: calc(env(safe-area-inset-bottom) + 118px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 100px);
     padding-left: max(16px, env(safe-area-inset-left));
     padding-right: max(16px, env(safe-area-inset-right));
     transition: transform 0.5s var(--ease-sheet), opacity 0.5s var(--ease-sheet);
@@ -359,20 +365,24 @@
   /* ---------- Formel ---------- */
 
   /* ---------- Schwebende Glas-Leiste unten ---------- */
+  /* Kochzeit-Leiste: unten angedockt, Hintergrund zieht bis zum Bildschirmrand durch */
   .bottom-bar {
     position: fixed; z-index: 30;
-    left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
-    bottom: calc(env(safe-area-inset-bottom) + 10px);
-    max-width: 616px; margin: 0 auto;
+    left: 0; right: 0; bottom: 0;
+    max-width: 640px; margin: 0 auto;
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 10px 10px 20px;
-    border-radius: var(--radius);
-    background: var(--card);
-    -webkit-backdrop-filter: blur(25px) saturate(180%);
-    backdrop-filter: blur(25px) saturate(180%);
-    border: 0.5px solid var(--card-stroke);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), inset 0 1px 0 var(--card-highlight);
+    padding: 12px max(16px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 12px) max(22px, env(safe-area-inset-left));
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: var(--bar);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    backdrop-filter: blur(30px) saturate(180%);
+    border-top: 0.5px solid var(--bar-stroke);
+    box-shadow: 0 -10px 34px rgba(0, 0, 0, 0.12), inset 0 1px 0 var(--card-highlight);
     transition: transform 0.5s var(--ease-sheet), opacity 0.4s ease;
+  }
+  .bottom-bar::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 160px;
+    background: var(--bar); pointer-events: none;
   }
   body.modal-open .bottom-bar { transform: translateY(140%); opacity: 0; }
   .bb-label { font-size: 12px; font-weight: 600; color: var(--label2); text-transform: uppercase; letter-spacing: 0.03em; }
@@ -482,8 +492,9 @@
 
   .t-buttons { display: flex; justify-content: space-between; align-items: center; max-width: 330px; margin: 14px auto 0; padding: 0 6px; }
   .round-btn {
-    width: 86px; height: 86px; border-radius: 50%; border: 0;
-    font-size: 17px; font-weight: 500;
+    width: 86px; height: 86px; border-radius: 50%; border: 0; padding: 0;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 15px; line-height: 1.15; font-weight: 500; letter-spacing: -0.01em;
     outline: 2px solid transparent; outline-offset: 3px;
   }
   .round-btn.gray { background: var(--fill2); color: var(--label); outline-color: var(--fill2); }
@@ -782,9 +793,9 @@
   };
   const DONENESS = {
     // Tz = Zieltemperatur an der Grenze Eiweiß/Eigelb
-    soft:   { label: 'Weich',      Tz: 63, note: 'Eigelb flüssig' },          // Eiweiß gerade fest
-    medium: { label: 'Wachsweich', Tz: 74, note: 'nur der Kern cremig' },     // Eiweiß komplett fest, Eigelb außen gestockt
-    hard:   { label: 'Hart',       Tz: 82, note: 'durchgegart' }              // Eiweiß und Eigelb durchgehend fest
+    soft:   { label: 'Weich',      title: 'Weiches Ei',      Tz: 63, note: 'Eigelb flüssig' },          // Eiweiß gerade fest
+    medium: { label: 'Wachsweich', title: 'Wachsweiches Ei', Tz: 74, note: 'nur der Kern cremig' },     // Eiweiß komplett fest, Eigelb außen gestockt
+    hard:   { label: 'Hart',       title: 'Hartes Ei',       Tz: 82, note: 'durchgegart' }              // Eiweiß und Eigelb durchgehend fest
   };
   const TASTE_MAX = 20;                                    // ± % Feinjustierung
   const START = {
@@ -817,16 +828,15 @@
   };
 
   const state = {
-    weight: clamp(Number(store.get('weight', 58)) || 58, W_MIN, W_MAX),
-    doneness: store.get('doneness', 'medium'),
+    weight: 58,                                           // startet immer mit Größe M
+    doneness: 'medium',                                   // startet immer mit Wachsweich
     start: 'room',                                        // startet immer mit Raumtemperatur
     model: store.get('model', 'williams'),
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
-    taste: clamp(Math.round(Number(store.get('taste', 0)) || 0), -TASTE_MAX, TASTE_MAX),
+    taste: 0,                                             // Geschmack startet neutral
     ppm: Number(store.get('ppm', DEFAULT_PPM)),
     keepAwake: store.get('keepAwake', false) === true
   };
-  if (!DONENESS[state.doneness]) state.doneness = 'medium';
   if (!MODELS[state.model]) state.model = 'williams';
   if (!(state.ppm >= 4.5 && state.ppm <= 7.5)) state.ppm = DEFAULT_PPM;
 
@@ -1040,7 +1050,7 @@
     btns.forEach(b => b.addEventListener('click', () => set(b.dataset.value, true)));
     set(value, false);
   }
-  initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; store.set('doneness', v); scheduleRender(); });
+  initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; scheduleRender(); });
   initSegmented($('#segStart'), state.start, v => { state.start = v; scheduleRender(); });
   initSegmented($('#segModel'), state.model, v => { state.model = v; store.set('model', v); scheduleRender(); });
 
@@ -1053,13 +1063,11 @@
     if (c !== lastClass) { lastClass = c; haptic(6); }
     scheduleRender();
   });
-  el.weight.addEventListener('change', () => store.set('weight', state.weight));
   el.chips.forEach(c => c.addEventListener('click', () => {
     haptic(8);
     state.weight = Number(c.dataset.w);
     lastClass = eggClass(state.weight);
     el.weight.value = state.weight;
-    store.set('weight', state.weight);
     scheduleRender();
   }));
 
@@ -1076,8 +1084,7 @@
     state.taste = v;
     scheduleRender();
   });
-  el.taste.addEventListener('change', () => store.set('taste', state.taste));
-  el.taste.addEventListener('dblclick', () => { state.taste = 0; el.taste.value = 0; store.set('taste', 0); haptic(8); scheduleRender(); });
+  el.taste.addEventListener('dblclick', () => { state.taste = 0; el.taste.value = 0; haptic(8); scheduleRender(); });
 
   /* ======================= Höhe & GPS ======================= */
   el.altitude.value = state.altitude;
@@ -1375,15 +1382,24 @@
     if (!('mediaSession' in navigator) || !T.cfg) return;
     const ms = navigator.mediaSession;
     const after = T.status === 'done' || T.status === 'over';
+    const d = DONENESS[T.cfg.key];
+    const art = artwork(T.cfg.key);
     try {
       ms.metadata = new MediaMetadata({
-        title: after ? 'Eierzeit · ' + T.cfg.don + ' ist fertig' : 'Eierzeit · ' + T.cfg.don,
-        artist: after ? 'Jetzt herausnehmen' : 'Fertig um ' + clockTime(T.endAt),
-        artwork: iconUrl ? [{ src: iconUrl, sizes: '180x180', type: 'image/png' }] : []
+        title: after ? d.title + ' ist fertig' : d.title,
+        artist: after ? 'Jetzt herausnehmen' : T.status === 'paused' ? 'Pausiert' : 'Fertig um ' + clockTime(T.endAt),
+        album: 'Eierzeit',
+        artwork: art ? [{ src: art, sizes: '512x512', type: 'image/png' }] : []
       });
-      ms.setActionHandler('pause', () => { if (T.status === 'running') pauseTimer(); });
-      ms.setActionHandler('play', () => { if (T.status === 'paused') startTimer(); });
     } catch (e) { /* */ }
+    const handler = (action, fn) => { try { ms.setActionHandler(action, fn); } catch (e) { /* nicht unterstützt */ } };
+    handler('pause', () => { if (T.status === 'running') pauseTimer(); });
+    handler('play', () => { if (T.status === 'paused') startTimer(); });
+    handler('seekto', () => {});                              // Spulen würde den Alarm verschieben
+    handler('seekbackward', null);
+    handler('seekforward', null);
+    handler('previoustrack', null);
+    handler('nexttrack', after && nextStageKey() ? () => goNextStage() : null);
     try { ms.playbackState = T.status === 'paused' ? 'paused' : (T.status === 'running' || after) ? 'playing' : 'none'; } catch (e) { /* */ }
     try {
       if (typeof ms.setPositionState !== 'function') return;
@@ -1394,6 +1410,45 @@
         ms.setPositionState();                                // Restzeit ausblenden
       }
     } catch (e) { /* */ }
+  }
+
+  // Bild für Sperrbildschirm / Dynamic Island: halbiertes Ei, Eigelb je nach Härtegrad
+  const ARTWORK = {};
+  function artwork(key) {
+    if (ARTWORK[key]) return ARTWORK[key];
+    try {
+      const S = 512, cv = document.createElement('canvas');
+      cv.width = cv.height = S;
+      const g = cv.getContext('2d');
+      const bg = g.createLinearGradient(0, 0, S, S);
+      bg.addColorStop(0, '#FFBE4D'); bg.addColorStop(1, '#FF7A00');
+      g.fillStyle = bg; g.fillRect(0, 0, S, S);
+      g.save();
+      g.translate(S / 2, S / 2 + 6);
+      // Eiweiß
+      g.shadowColor = 'rgba(120, 50, 0, 0.35)'; g.shadowBlur = 30; g.shadowOffsetY = 12;
+      const white = g.createRadialGradient(-40, -60, 20, 0, 0, 230);
+      white.addColorStop(0, '#FFFFFF'); white.addColorStop(0.75, '#FBF6EE'); white.addColorStop(1, '#EDE3D3');
+      g.fillStyle = white; g.fill(new Path2D(eggPathD(390, 305)));
+      g.shadowColor = 'transparent';
+      // Eigelb
+      const cy = 28, R = 100;
+      const yolk = (r, c0, c1) => {
+        const gr = g.createRadialGradient(-r * 0.3, cy - r * 0.35, r * 0.1, 0, cy, r);
+        gr.addColorStop(0, c0); gr.addColorStop(1, c1);
+        g.fillStyle = gr; g.beginPath(); g.arc(0, cy, r, 0, Math.PI * 2); g.fill();
+      };
+      const gloss = r => {
+        g.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        g.beginPath(); g.ellipse(-r * 0.35, cy - r * 0.42, r * 0.28, r * 0.14, -0.5, 0, Math.PI * 2); g.fill();
+      };
+      if (key === 'soft') { yolk(R + 6, '#FFB020', '#F07800'); gloss(R); }
+      else if (key === 'medium') { yolk(R, '#FFE07A', '#F5C542'); yolk(R * 0.62, '#FFA41C', '#F08000'); gloss(R * 0.62); }
+      else { yolk(R, '#FFF1A8', '#F3D46A'); }
+      g.restore();
+      ARTWORK[key] = cv.toDataURL('image/png');
+    } catch (e) { ARTWORK[key] = iconUrl; }
+    return ARTWORK[key];
   }
 
   /* ======================= Wake Lock ======================= */
