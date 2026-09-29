@@ -497,6 +497,13 @@
     padding: 12px 14px; border-radius: 16px; background: var(--fill);
     font-size: 13px; line-height: 17px; color: var(--label2);
   }
+  .next-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 18px auto 0; min-height: 50px; padding: 0 22px; border: 0; border-radius: 25px;
+    background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent);
+    font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .next-btn svg { width: 18px; height: 18px; flex: none; }
   .t-toggle {
     display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
     padding: 12px 14px; border: 0; border-radius: 16px; background: var(--fill);
@@ -718,6 +725,10 @@
       <button class="round-btn gray pressable" id="resetBtn" type="button">Reset</button>
       <button class="round-btn green pressable" id="mainBtn" type="button">Start</button>
     </div>
+    <button class="next-btn pressable" id="nextBtn" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 5.9v12.2a1 1 0 0 0 1.55.83L15 13.1V18a1 1 0 0 0 2 0V6a1 1 0 0 0-2 0v4.9L6.55 5.07A1 1 0 0 0 5 5.9Z"/></svg>
+      <span id="nextLabel">Weiter bis Wachsweich</span>
+    </button>
     <div class="t-info">
       <button class="t-toggle pressable" type="button" id="wlToggle" aria-pressed="false"><span class="dot" id="wlDot"></span><span id="wlText">Display anlassen: aus</span></button>
       <div><span class="dot on"></span><span>Läuft auch bei gesperrtem Display weiter. Der Alarm kommt über die Medienlautstärke.</span></div>
@@ -925,7 +936,7 @@
     bottomBar: $('#bottomBar'), bbLabel: $('#bbLabel'), bbTime: $('#bbTime'), openTimer: $('#openTimer'), ctaLabel: $('#ctaLabel'),
     backdrop: $('#backdrop'), app: $('#app'),
     timerSheet: $('#timerSheet'), tSummary: $('#tSummary'), ringWrap: $('#ringWrap'), ringProg: $('#ringProg'),
-    tTime: $('#tTime'), tSub: $('#tSub'), mainBtn: $('#mainBtn'), resetBtn: $('#resetBtn'), wlDot: $('#wlDot'), wlText: $('#wlText'), wlToggle: $('#wlToggle'),
+    tTime: $('#tTime'), tSub: $('#tSub'), mainBtn: $('#mainBtn'), resetBtn: $('#resetBtn'), nextBtn: $('#nextBtn'), nextLabel: $('#nextLabel'), wlDot: $('#wlDot'), wlText: $('#wlText'), wlToggle: $('#wlToggle'),
     calibSheet: $('#calibSheet'), cardFrame: $('#cardFrame'), calibRange: $('#calibRange'), calibInfo: $('#calibInfo')
   };
 
@@ -1360,16 +1371,29 @@
   function bgAlarmPlaying() {
     return bg.ok && bg.audio && !bg.audio.paused && !bg.audio.ended;
   }
+  // Sperrbildschirm / Dynamic Island: Titel, Fertig-Uhrzeit und Restzeit bis 00:00
   function setMediaSession() {
     if (!('mediaSession' in navigator) || !T.cfg) return;
+    const ms = navigator.mediaSession;
+    const after = T.status === 'done' || T.status === 'over';
     try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: 'Eierzeit · ' + T.cfg.don,
-        artist: 'Fertig um ' + clockTime(T.endAt),
+      ms.metadata = new MediaMetadata({
+        title: after ? 'Eierzeit · ' + T.cfg.don + ' ist fertig' : 'Eierzeit · ' + T.cfg.don,
+        artist: after ? 'Jetzt herausnehmen' : 'Fertig um ' + clockTime(T.endAt),
         artwork: iconUrl ? [{ src: iconUrl, sizes: '180x180', type: 'image/png' }] : []
       });
-      navigator.mediaSession.setActionHandler('pause', () => { if (T.status === 'running') pauseTimer(); });
-      navigator.mediaSession.setActionHandler('play', () => { if (T.status === 'paused') startTimer(); });
+      ms.setActionHandler('pause', () => { if (T.status === 'running') pauseTimer(); });
+      ms.setActionHandler('play', () => { if (T.status === 'paused') startTimer(); });
+    } catch (e) { /* */ }
+    try { ms.playbackState = T.status === 'paused' ? 'paused' : (T.status === 'running' || after) ? 'playing' : 'none'; } catch (e) { /* */ }
+    try {
+      if (typeof ms.setPositionState !== 'function') return;
+      if (T.status === 'running' || T.status === 'paused') {
+        const dur = T.totalMs / 1000;
+        ms.setPositionState({ duration: dur, playbackRate: 1, position: clamp(elapsedMs() / 1000, 0, dur) });
+      } else {
+        ms.setPositionState();                                // Restzeit ausblenden
+      }
     } catch (e) { /* */ }
   }
 
@@ -1519,6 +1543,10 @@
     if (mb.dataset.cls !== cls) { mb.classList.remove('green', 'orange', 'red'); mb.classList.add(cls); mb.dataset.cls = cls; }
     el.resetBtn.disabled = s === 'idle';
 
+    const nk = (s === 'done' || s === 'over') ? nextStageKey() : null;
+    el.nextBtn.hidden = !nk;
+    if (nk) setText(el.nextLabel, `Weiter bis ${DONENESS[nk].label} · noch ${fmt(T.cfg.stages[nk] - eSec)}`);
+
     const tasteChip = T.cfg.taste ? `<span>Geschmack ${T.cfg.taste > 0 ? '+' : '−'}${Math.abs(T.cfg.taste)} %</span>` : '';
     const sum = `<span>${T.cfg.model}</span><span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>${tasteChip}`;
     if (el.tSummary.dataset.v !== sum) { el.tSummary.innerHTML = sum; el.tSummary.dataset.v = sum; }
@@ -1579,6 +1607,7 @@
     bgPause();
     stopLoops();
     syncWakeLock();
+    setMediaSession();
     renderTimer();
   }
   function resetTimer() {
@@ -1586,6 +1615,7 @@
     stopAlarm();
     timerLoad();
     syncWakeLock();
+    setMediaSession();
     renderTimer();
   }
   function finish() {
@@ -1603,8 +1633,34 @@
       startAlarm();
     }
     haptic([400, 200, 400]);
+    setMediaSession();
     renderTimer();
     if (openSheetEl !== el.timerSheet) openSheet(el.timerSheet);
+  }
+  // Nächste Garstufe, die noch nicht erreicht ist (mind. 5 s Abstand)
+  function nextStageKey() {
+    if (!T.cfg) return null;
+    const i = STAGE_KEYS.indexOf(T.cfg.key), e = elapsedMs() / 1000;
+    for (let j = i + 1; j < STAGE_KEYS.length; j++) if (T.cfg.stages[STAGE_KEYS[j]] > e + 5) return STAGE_KEYS[j];
+    return null;
+  }
+  // Einige Eier sind raus, die übrigen sollen härter werden: still weiterlaufen bis zur nächsten Stufe
+  function goNextStage() {
+    const k = nextStageKey();
+    if (!k) return;
+    const startAt = T.endAt - T.totalMs;
+    stopAlarm();
+    T.cfg.key = k;
+    T.cfg.don = DONENESS[k].label;
+    T.totalMs = Math.round(T.cfg.stages[k]) * 1000;
+    T.cfg.sec = T.totalMs / 1000;
+    T.endAt = startAt + T.totalMs;
+    T.remainingMs = Math.max(0, T.endAt - Date.now());
+    T.status = 'running';
+    bgPlayFrom((Date.now() - startAt) / 1000);              // neue Alarm-Spur mit Ton bei der nächsten Stufe
+    syncWakeLock();
+    startLoops();
+    renderTimer();
   }
   function takeOut() {
     T.outMs = elapsedMs();
@@ -1612,6 +1668,7 @@
     stopLoops();
     stopAlarm();
     syncWakeLock();
+    setMediaSession();
     renderTimer();
   }
 
@@ -1622,12 +1679,13 @@
       case 'idle':
       case 'paused': startTimer(); break;
       case 'running': pauseTimer(); break;
-      case 'done': stopAlarm(); T.status = 'over'; renderTimer(); break;
+      case 'done': stopAlarm(); T.status = 'over'; setMediaSession(); renderTimer(); break;
       case 'over': takeOut(); break;
       case 'out': resetTimer(); break;
     }
   });
   el.resetBtn.addEventListener('click', () => { haptic([8, 30, 8]); resetTimer(); });
+  el.nextBtn.addEventListener('click', () => { haptic(15); unlockAudio(); goNextStage(); });
   el.openTimer.addEventListener('click', () => {
     haptic(12);
     unlockAudio();
