@@ -819,7 +819,7 @@
   const state = {
     weight: clamp(Number(store.get('weight', 58)) || 58, W_MIN, W_MAX),
     doneness: store.get('doneness', 'medium'),
-    start: store.get('start', 'fridge'),
+    start: 'room',                                        // startet immer mit Raumtemperatur
     model: store.get('model', 'williams'),
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
     taste: clamp(Math.round(Number(store.get('taste', 0)) || 0), -TASTE_MAX, TASTE_MAX),
@@ -827,7 +827,6 @@
     keepAwake: store.get('keepAwake', false) === true
   };
   if (!DONENESS[state.doneness]) state.doneness = 'medium';
-  if (!START[state.start]) state.start = 'fridge';
   if (!MODELS[state.model]) state.model = 'williams';
   if (!(state.ppm >= 4.5 && state.ppm <= 7.5)) state.ppm = DEFAULT_PPM;
 
@@ -1042,7 +1041,7 @@
     set(value, false);
   }
   initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; store.set('doneness', v); scheduleRender(); });
-  initSegmented($('#segStart'), state.start, v => { state.start = v; store.set('start', v); scheduleRender(); });
+  initSegmented($('#segStart'), state.start, v => { state.start = v; scheduleRender(); });
   initSegmented($('#segModel'), state.model, v => { state.model = v; store.set('model', v); scheduleRender(); });
 
   /* ======================= Gewicht ======================= */
@@ -1542,6 +1541,7 @@
     setText(mb, label);
     if (mb.dataset.cls !== cls) { mb.classList.remove('green', 'orange', 'red'); mb.classList.add(cls); mb.dataset.cls = cls; }
     el.resetBtn.disabled = s === 'idle';
+    setText(el.resetBtn, s === 'idle' || s === 'out' ? 'Reset' : 'Abbrechen');
 
     const nk = (s === 'done' || s === 'over') ? nextStageKey() : null;
     el.nextBtn.hidden = !nk;
