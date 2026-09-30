@@ -584,7 +584,8 @@
 
 <main id="app">
   <!-- Formel-Umschalter -->
-  <section class="card card-model" aria-label="Berechnungsformel">
+  <!-- Ausgeblendet: es wird nur Williams genutzt. Zum Wieder-Einblenden "hidden" entfernen und SHOW_MODEL_SWITCH = true setzen. -->
+  <section class="card card-model" id="modelCard" aria-label="Berechnungsformel" hidden>
     <div class="segmented" id="segModel" role="radiogroup" aria-label="Berechnungsformel">
       <div class="seg-thumb" aria-hidden="true"></div>
       <button type="button" role="radio" data-value="williams">Williams<small id="modelTimeWilliams">–:––</small></button>
@@ -796,6 +797,7 @@
   const PHYS = { C: 0.451, F: 0.76, RHO: 1.038 };
   // Gruber-Formel (Werner Gruber): t = 0,15 · d² · ln(2 · (T_W − T_S) / (T_W − T_Z)), d = Eidurchmesser in cm, t in min
   const GRUBER = { C: 0.15, F: 2 };
+  const SHOW_MODEL_SWITCH = false;                         // Gruber bleibt im Code, ist aber in der Oberfläche ausgeblendet
   const MODELS = {
     williams: { label: 'Williams' },                      // nach Gewicht (m^⅔)
     gruber:   { label: 'Gruber' }                         // nach Eidurchmesser (d²)
@@ -840,7 +842,7 @@
     weight: 58,                                           // startet immer mit Größe M
     doneness: 'medium',                                   // startet immer mit Wachsweich
     start: 'room',                                        // startet immer mit Raumtemperatur
-    model: store.get('model', 'williams'),
+    model: SHOW_MODEL_SWITCH ? store.get('model', 'williams') : 'williams',
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
     ppm: Number(store.get('ppm', DEFAULT_PPM)),
     keepAwake: store.get('keepAwake', false) === true
@@ -1051,7 +1053,10 @@
   }
   initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; scheduleRender(); });
   initSegmented($('#segStart'), state.start, v => { state.start = v; scheduleRender(); });
-  initSegmented($('#segModel'), state.model, v => { state.model = v; store.set('model', v); scheduleRender(); });
+  if (SHOW_MODEL_SWITCH) {
+    $('#modelCard').hidden = false;
+    initSegmented($('#segModel'), state.model, v => { state.model = v; store.set('model', v); scheduleRender(); });
+  }
 
   /* ======================= Gewicht ======================= */
   el.weight.value = state.weight;
@@ -1615,7 +1620,7 @@
     el.nextBtn.hidden = !nk;
     if (nk) setText(el.nextLabel, `Weiter bis ${DONENESS[nk].label} · noch ${fmt(T.cfg.stages[nk] - eSec)}`);
 
-    const sum = `<span>${T.cfg.model}</span><span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>`;
+    const sum = `${SHOW_MODEL_SWITCH ? `<span>${T.cfg.model}</span>` : ''}<span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>`;
     if (el.tSummary.dataset.v !== sum) { el.tSummary.innerHTML = sum; el.tSummary.dataset.v = sum; }
 
     // Schwebende Leiste unten
