@@ -32,6 +32,7 @@
     --fill2: rgba(118, 118, 128, 0.2);
     --track: rgba(120, 120, 128, 0.22);
     --seg-thumb: #FFFFFF;
+    --row: rgba(255, 255, 255, 0.95);
     --knob: #FFFFFF;
     --accent: #FF9500;
     --accent2: #FFCC00;
@@ -67,6 +68,7 @@
       --fill2: rgba(118, 118, 128, 0.36);
       --track: rgba(120, 120, 128, 0.36);
       --seg-thumb: #636366;
+      --row: rgba(44, 44, 46, 0.95);
       --knob: #FFFFFF;
       --accent: #FF9F0A;
       --accent2: #FFD60A;
@@ -98,6 +100,7 @@
     --fill2: rgba(118, 118, 128, 0.36);
     --track: rgba(120, 120, 128, 0.36);
     --seg-thumb: #636366;
+    --row: rgba(44, 44, 46, 0.95);
     --knob: #FFFFFF;
     --accent: #FF9F0A;
     --accent2: #FFD60A;
@@ -559,6 +562,26 @@
   .card-frame .lbl-w { top: 10px; left: 50%; transform: translateX(-50%); }
   .card-frame .lbl-h { top: 50%; right: 6px; transform: translateY(-50%) rotate(90deg); transform-origin: center; }
   .card-chip { position: absolute; left: 22%; top: 16%; width: 22%; aspect-ratio: 1.3; border-radius: 4px; background: color-mix(in srgb, var(--accent2) 45%, transparent); }
+  .calib-mode { margin: 4px 0 14px; }
+  .device-group { margin: 14px 4px 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--label2); }
+  .device-list { border-radius: 14px; overflow: hidden; background: var(--row); }
+  .device-row {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px;
+    padding: 10px 14px; border: 0; background: transparent; text-align: left;
+    border-bottom: 0.5px solid var(--sep);
+  }
+  .device-row:last-child { border-bottom: 0; }
+  .device-row:active { background: var(--fill); }
+  .device-row span { flex: 1; min-width: 0; }
+  .device-row b { display: block; font-size: 15px; font-weight: 500; line-height: 20px; }
+  .device-row small { display: block; font-size: 12px; color: var(--label2); line-height: 16px; }
+  .device-row i {
+    flex: none; font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent);
+    padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .device-row svg { flex: none; width: 20px; height: 20px; color: var(--accent); visibility: hidden; }
+  .device-row.on svg { visibility: visible; }
+  .device-row.on b { font-weight: 600; }
   .calib-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
   .step-btn {
     flex: none; width: 44px; height: 44px; border-radius: 22px; border: 0;
@@ -617,11 +640,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11"/><path d="M8.5 3h7"/><circle cx="12" cy="18" r="3"/></svg>
         Anpieksen
       </div>
-      <button class="icon-btn tpl-calib pressable" id="calibBtn" type="button" aria-label="Maßstab mit Kreditkarte kalibrieren">
+      <button class="icon-btn tpl-calib pressable" id="calibBtn" type="button" aria-label="Maßstab einstellen: Smartphone wählen oder mit Kreditkarte kalibrieren">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19M6 15h4"/>
+          <path d="M3.5 16.5 16.5 3.5l4 4-13 13z"/><path d="m7.5 12.5 2 2M10.5 9.5l2 2M13.5 6.5l2 2"/>
         </svg>
-        Karte
+        Maßstab
       </button>
     </div>
 
@@ -763,11 +786,24 @@
     <div class="grabber"></div>
     <div class="sheet-nav">
       <button class="nav-btn pressable" type="button" data-close>Abbrechen</button>
-      <h3 id="calibTitle">Kalibrierung</h3>
+      <h3 id="calibTitle">Maßstab</h3>
       <button class="nav-btn strong pressable" type="button" id="calibSave">Fertig</button>
     </div>
   </div>
   <div class="sheet-body">
+    <div class="segmented calib-mode" id="segCalib" role="radiogroup" aria-label="Art der Kalibrierung">
+      <div class="seg-thumb" aria-hidden="true"></div>
+      <button type="button" role="radio" data-value="device">Smartphone</button>
+      <button type="button" role="radio" data-value="card">Kreditkarte</button>
+    </div>
+
+    <div id="calibDevicePane">
+      <p class="hint center">Wähle dein Smartphone – der Maßstab wird sofort übernommen.</p>
+      <div id="deviceList"></div>
+      <button class="text-btn pressable" type="button" id="toCardMode">Nicht dabei? Mit Kreditkarte kalibrieren</button>
+    </div>
+
+    <div id="calibCardPane" hidden>
     <p class="hint center">Lege eine Standard-Kreditkarte (85,60 × 53,98 mm) <b>hochkant</b> auf den Rahmen und justiere, bis die Kanten exakt deckungsgleich sind.</p>
     <div class="card-frame-wrap">
       <div class="card-frame" id="cardFrame">
@@ -783,7 +819,8 @@
       <button class="step-btn pressable" type="button" id="calibPlus" aria-label="Größer">+</button>
     </div>
     <div class="calib-info" id="calibInfo"></div>
-    <button class="text-btn pressable" type="button" id="calibReset">Auf iPhone 17 Pro (460 ppi) zurücksetzen</button>
+    <button class="text-btn pressable" type="button" id="calibReset">Zurücksetzen (Gerät automatisch erkennen)</button>
+    </div>
   </div>
 </section>
 
@@ -815,6 +852,29 @@
   };
   // iPhone 17 Pro: 460 ppi / dpr 3 = 153,33 CSS-px pro Zoll → / 25,4 = 6,037 CSS-px pro mm
   const DEFAULT_PPM = (460 / 3) / 25.4;
+  // Maßstab bekannter Smartphones. iPhones: CSS-px pro Zoll = ppi / dpr.
+  // Android: Displaybreite in mm (aus Diagonale und Seitenverhältnis); CSS-px/mm = CSS-Bildschirmbreite / Breite,
+  // damit auch eine geänderte Anzeigegröße (Zoom) berücksichtigt wird.
+  // match: [CSS-Breite, dpr] zur automatischen Erkennung
+  const DEVICES = [
+    { id: 'ip17',   group: 'iPhone',  name: 'iPhone 17 · 17 Pro · 17 Pro Max · Air', ppi: 460, dpr: 3, match: [[402, 3], [440, 3], [420, 3]] },
+    { id: 'ip16',   group: 'iPhone',  name: 'iPhone 16 · 16 Plus · 16 Pro · 16 Pro Max · 16e', ppi: 460, dpr: 3, match: [[393, 3], [430, 3], [402, 3], [440, 3], [390, 3]] },
+    { id: 'ip15',   group: 'iPhone',  name: 'iPhone 15 · 15 Plus · 15 Pro · 15 Pro Max', ppi: 460, dpr: 3, match: [[393, 3], [430, 3]] },
+    { id: 'ip14',   group: 'iPhone',  name: 'iPhone 14 · 14 Plus · 14 Pro · 14 Pro Max', ppi: 460, dpr: 3, match: [[390, 3], [428, 3], [393, 3], [430, 3]] },
+    { id: 'ip12',   group: 'iPhone',  name: 'iPhone 12 · 13 (auch Pro und Pro Max)', ppi: 460, dpr: 3, match: [[390, 3], [428, 3]] },
+    { id: 'ipmini', group: 'iPhone',  name: 'iPhone 12 mini · 13 mini', ppi: 476, dpr: 3, match: [[375, 3]] },
+    { id: 'ip11',   group: 'iPhone',  name: 'iPhone 11 · XR · SE', ppi: 326, dpr: 2, match: [[414, 2], [375, 2]] },
+    { id: 's25',    group: 'Android', name: 'Samsung Galaxy S25 · S24', inch: 6.2, widthMm: 66.0 },
+    { id: 's25u',   group: 'Android', name: 'Samsung Galaxy S25 Ultra', inch: 6.9, widthMm: 73.4 },
+    { id: 's24u',   group: 'Android', name: 'Samsung Galaxy S24 Ultra', inch: 6.8, widthMm: 72.4 },
+    { id: 'a56',    group: 'Android', name: 'Samsung Galaxy A56', inch: 6.7, widthMm: 71.3 },
+    { id: 'a55',    group: 'Android', name: 'Samsung Galaxy A55', inch: 6.6, widthMm: 70.3 },
+    { id: 'pixel9', group: 'Android', name: 'Google Pixel 9 · 9 Pro · 10', inch: 6.3, widthMm: 65.1 }
+  ];
+  const screenShort = () => Math.min(screen.width, screen.height);
+  const devicePpm = d => d.ppi ? d.ppi / d.dpr / 25.4 : screenShort() / d.widthMm;
+  const deviceMatches = d => !!d.match && d.match.some(([w, r]) => w === screenShort() && r === Math.round((window.devicePixelRatio || 1) * 100) / 100);
+  const detectDevice = () => DEVICES.find(deviceMatches) || null;
   const CARD = { w: 85.60, h: 53.98, r: 3.18 };           // ISO/IEC 7810 ID-1
   const W_MIN = 45, W_MAX = 85;
   const EGG_PAD = 1.2;                                     // mm Rand um die Silhouette im SVG
@@ -844,11 +904,24 @@
     start: 'room',                                        // startet immer mit Raumtemperatur
     model: SHOW_MODEL_SWITCH ? store.get('model', 'williams') : 'williams',
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
-    ppm: Number(store.get('ppm', DEFAULT_PPM)),
+    ppm: DEFAULT_PPM,
+    deviceId: null,
+    calibSource: 'none',                                  // device | card | auto | none
     keepAwake: store.get('keepAwake', false) === true
   };
   if (!MODELS[state.model]) state.model = 'williams';
-  if (!(state.ppm >= 4.5 && state.ppm <= 7.5)) state.ppm = DEFAULT_PPM;
+  // Reihenfolge: gewähltes Smartphone → Kreditkarten-Kalibrierung → automatische Erkennung → iPhone 17 Pro
+  function resolveCalibration() {
+    const dev = DEVICES.find(d => d.id === store.get('device', null));
+    const cardPpm = Number(store.get('ppm', NaN));
+    const auto = detectDevice();
+    if (dev) Object.assign(state, { ppm: devicePpm(dev), deviceId: dev.id, calibSource: 'device' });
+    else if (cardPpm >= 4.5 && cardPpm <= 7.5) Object.assign(state, { ppm: cardPpm, deviceId: null, calibSource: 'card' });
+    else if (auto) Object.assign(state, { ppm: devicePpm(auto), deviceId: null, calibSource: 'auto' });
+    else Object.assign(state, { ppm: DEFAULT_PPM, deviceId: null, calibSource: 'none' });
+  }
+  const autoPpm = () => { const a = detectDevice(); return a ? devicePpm(a) : DEFAULT_PPM; };
+  resolveCalibration();
 
   /* ======================= Haptik ======================= */
   // navigator.vibrate (Android) bzw. Safari-18-Switch-Trick für iOS-Taptic-Feedback
@@ -953,7 +1026,7 @@
     backdrop: $('#backdrop'), app: $('#app'),
     timerSheet: $('#timerSheet'), tSummary: $('#tSummary'), ringWrap: $('#ringWrap'), ringProg: $('#ringProg'),
     tTime: $('#tTime'), tSub: $('#tSub'), mainBtn: $('#mainBtn'), resetBtn: $('#resetBtn'), nextBtn: $('#nextBtn'), nextLabel: $('#nextLabel'), wlDot: $('#wlDot'), wlText: $('#wlText'), wlToggle: $('#wlToggle'),
-    calibSheet: $('#calibSheet'), cardFrame: $('#cardFrame'), calibRange: $('#calibRange'), calibInfo: $('#calibInfo')
+    calibSheet: $('#calibSheet'), deviceList: $('#deviceList'), calibDevicePane: $('#calibDevicePane'), calibCardPane: $('#calibCardPane'), cardFrame: $('#cardFrame'), calibRange: $('#calibRange'), calibInfo: $('#calibInfo')
   };
 
   function paintRange(r) {
@@ -996,16 +1069,18 @@
   }
 
   function renderCalibStatus() {
-    const custom = Math.abs(state.ppm - DEFAULT_PPM) > 0.0005;
-    const shortSide = Math.min(screen.width, screen.height);
-    const isPro = shortSide === 402 && Math.round(window.devicePixelRatio || 1) === 3;
     const info = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-6h2v6Zm0-8h-2V7h2v2Z"/></svg>';
     let text = '', warn = false;
-    if (custom) {
-      text = `Maßstab individuell kalibriert: ${nf(state.ppm, 3)} px/mm (≈ ${nf(state.ppm * 25.4 * (window.devicePixelRatio || 1), 0)} ppi).`;
-    } else if (!isPro) {
+    const auto = detectDevice();
+    if (state.calibSource === 'device') {
+      text = 'Maßstab: ' + DEVICES.find(d => d.id === state.deviceId).name;
+    } else if (state.calibSource === 'card') {
+      text = `Maßstab mit Kreditkarte kalibriert (${nf(state.ppm, 3)} px/mm).`;
+    } else if (state.calibSource === 'auto') {
+      if (auto.id !== 'ip17') text = `Automatisch erkannt: iPhone mit ${auto.ppi} ppi.`;
+    } else {
       warn = true;
-      text = 'Dieses Display weicht vom iPhone 17 Pro ab – bitte mit einer Kreditkarte kalibrieren („Karte“).';
+      text = 'Display nicht erkannt – tippe auf „Maßstab“ und wähle dein Smartphone oder kalibriere mit einer Kreditkarte.';
     }
     el.calibStatus.hidden = !text;
     el.calibStatus.classList.toggle('warn', warn);
@@ -1050,6 +1125,7 @@
     };
     btns.forEach(b => b.addEventListener('click', () => set(b.dataset.value, true)));
     set(value, false);
+    return set;
   }
   initSegmented($('#segDoneness'), state.doneness, v => { state.doneness = v; scheduleRender(); });
   initSegmented($('#segStart'), state.start, v => { state.start = v; scheduleRender(); });
@@ -1200,23 +1276,72 @@
     const dpr = window.devicePixelRatio || 1;
     el.calibInfo.textContent = `${nf(tempPpm, 3)} CSS-px/mm · ${nf(tempPpm * 25.4, 2)} CSS-px/Zoll · ≈ ${nf(tempPpm * 25.4 * dpr, 0)} ppi`;
   }
+  let calibMode = 'device';
+  function setCalibMode(m) {
+    calibMode = m;
+    el.calibDevicePane.hidden = m !== 'device';
+    el.calibCardPane.hidden = m !== 'card';
+    if (m === 'card') { tempPpm = state.ppm; renderCardFrame(); }
+  }
+  const setCalibSeg = initSegmented($('#segCalib'), 'device', m => setCalibMode(m));
+
+  function applyCalibration() {
+    layoutTemplate();
+    renderEgg();
+    renderCalibStatus();
+  }
+  const checkIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  function renderDeviceList() {
+    let html = '', group = '';
+    DEVICES.forEach(d => {
+      if (d.group !== group) {
+        if (group) html += '</div>';
+        group = d.group;
+        html += `<div class="device-group">${group}</div><div class="device-list">`;
+      }
+      const sub = d.ppi ? `${d.ppi} ppi` : `${nf(d.inch, 1)} Zoll · ${nf(d.widthMm, 1)} mm breit`;
+      const on = state.calibSource === 'device' ? state.deviceId === d.id : (state.calibSource === 'auto' && d === detectDevice());
+      html += `<button type="button" class="device-row${on ? ' on' : ''}" data-id="${d.id}"><span><b>${d.name}</b><small>${sub}</small></span>` +
+        (deviceMatches(d) ? '<i>Dieses Gerät</i>' : '') + checkIcon + '</button>';
+    });
+    el.deviceList.innerHTML = html + '</div>';
+  }
+  el.deviceList.addEventListener('click', e => {
+    const row = e.target.closest('.device-row');
+    if (!row) return;
+    const d = DEVICES.find(x => x.id === row.dataset.id);
+    haptic([10, 40, 10]);
+    Object.assign(state, { ppm: devicePpm(d), deviceId: d.id, calibSource: 'device' });
+    store.set('device', d.id);
+    store.del('ppm');
+    applyCalibration();
+    renderDeviceList();
+    setTimeout(() => { if (openSheetEl === el.calibSheet) closeSheet(); }, 380);
+  });
+  $('#toCardMode').addEventListener('click', () => { haptic(8); setCalibSeg('card', false); setCalibMode('card'); });
+
   $('#calibBtn').addEventListener('click', () => {
     haptic(10);
-    tempPpm = state.ppm;
-    renderCardFrame();
+    const m = state.calibSource === 'card' ? 'card' : 'device';
+    setCalibSeg(m, false);
+    setCalibMode(m);
+    renderDeviceList();
     openSheet(el.calibSheet);
   });
   el.calibRange.addEventListener('input', () => { tempPpm = Number(el.calibRange.value); renderCardFrame(); });
   const nudge = d => { haptic(5); tempPpm = clamp(Math.round((tempPpm + d) * 1000) / 1000, 4.5, 7.5); renderCardFrame(); };
   $('#calibMinus').addEventListener('click', () => nudge(-0.005));
   $('#calibPlus').addEventListener('click', () => nudge(0.005));
-  $('#calibReset').addEventListener('click', () => { haptic(10); tempPpm = DEFAULT_PPM; renderCardFrame(); });
+  $('#calibReset').addEventListener('click', () => { haptic(10); tempPpm = autoPpm(); renderCardFrame(); });
   $('#calibSave').addEventListener('click', () => {
     haptic([10, 40, 10]);
-    state.ppm = tempPpm;
-    if (Math.abs(state.ppm - DEFAULT_PPM) < 0.0005) store.del('ppm'); else store.set('ppm', state.ppm);
-    layoutTemplate();
-    renderEgg();
+    if (calibMode === 'card') {
+      store.del('device');
+      if (Math.abs(tempPpm - autoPpm()) < 0.0005) store.del('ppm');   // entspricht der automatischen Erkennung
+      else store.set('ppm', tempPpm);
+      resolveCalibration();
+      applyCalibration();
+    }
     closeSheet();
   });
 
