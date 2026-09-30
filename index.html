@@ -311,23 +311,8 @@
     box-shadow: 0 0.5px 4px rgba(0, 0, 0, 0.12), 0 6px 13px rgba(0, 0, 0, 0.12);
   }
   .range-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--label3); margin-top: -2px; font-variant-numeric: tabular-nums; }
-  .range-labels.strong { display: grid; grid-template-columns: 1fr auto 1fr; color: var(--label2); font-weight: 500; }
-  .range-labels.strong span:last-child { text-align: right; }
 
   /* Bipolarer Regler: Füllung von der Mitte zum Knopf, Mittelmarke */
-  .bipolar { position: relative; }
-  .bipolar::before {
-    content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 14px;
-    margin: -4px 0 0 -1px; border-radius: 1px; background: var(--label3); pointer-events: none;
-  }
-  .bipolar input[type="range"] { position: relative; --a: 0.5; --b: 0.5; }
-  .bipolar input[type="range"]::-webkit-slider-runnable-track {
-    background: linear-gradient(to right,
-      var(--track) 0, var(--track) calc(14px + (100% - 28px) * var(--a)),
-      var(--accent) calc(14px + (100% - 28px) * var(--a)), var(--accent) calc(14px + (100% - 28px) * var(--b)),
-      var(--track) calc(14px + (100% - 28px) * var(--b)), var(--track) 100%);
-  }
-  .bipolar input[type="range"]::-moz-range-progress { background: transparent; }
 
   /* ---------- Segmented Control ---------- */
   .segmented {
@@ -508,8 +493,9 @@
     background: var(--knob); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
     transition: left 0.25s linear;
   }
-  .stage-ticks { position: relative; height: 30px; margin-top: 6px; font-size: 11px; color: var(--label2); font-variant-numeric: tabular-nums; }
-  .stage-ticks span { position: absolute; top: 0; transform: translateX(-50%); text-align: center; line-height: 13px; white-space: nowrap; }
+  /* Legende in vier festen Spalten, damit nahe Stufen sich nie überlappen */
+  .stage-ticks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; font-size: 11px; color: var(--label2); font-variant-numeric: tabular-nums; }
+  .stage-ticks span { text-align: center; line-height: 14px; white-space: nowrap; }
   .stage-ticks span.target { color: var(--label); font-weight: 600; }
   .t-time.over { color: var(--green); font-size: min(14vw, 56px); }
 
@@ -654,6 +640,7 @@
       <div class="seg-thumb" aria-hidden="true"></div>
       <button type="button" role="radio" data-value="soft">Weich<small>flüssig</small></button>
       <button type="button" role="radio" data-value="medium">Wachsweich<small>cremig</small></button>
+      <button type="button" role="radio" data-value="firm">Mittelhart<small>saftig</small></button>
       <button type="button" role="radio" data-value="hard">Hart<small>fest</small></button>
     </div>
   </section>
@@ -666,20 +653,6 @@
       <button type="button" role="radio" data-value="fridge">Kühlschrank<small>4 °C</small></button>
       <button type="button" role="radio" data-value="room">Raumtemperatur<small>22 °C</small></button>
     </div>
-  </section>
-
-  <!-- Geschmack -->
-  <section class="card" aria-labelledby="tasteTitle">
-    <div class="row">
-      <h2 id="tasteTitle">Mein Geschmack</h2>
-      <span class="value" id="tasteVal">±0 %</span>
-    </div>
-    <div class="bipolar">
-      <label for="taste" class="sr-only">Feinjustierung der Kochzeit in Prozent</label>
-      <input type="range" id="taste" min="-20" max="20" step="5" value="0">
-    </div>
-    <div class="range-labels strong"><span>weicher</span><span>nach Formel</span><span>fester</span></div>
-    <p class="seg-desc" id="tasteDesc"></p>
   </section>
 
   <!-- Höhe -->
@@ -753,11 +726,12 @@
       <div class="stage-bar" id="stageBar">
         <i class="stage-mk" data-k="soft"></i>
         <i class="stage-mk" data-k="medium"></i>
+        <i class="stage-mk" data-k="firm"></i>
         <i class="stage-mk" data-k="hard"></i>
         <b class="stage-cursor" id="stageCursor"></b>
       </div>
       <div class="stage-ticks" id="stageTicks">
-        <span data-k="soft"></span><span data-k="medium"></span><span data-k="hard"></span>
+        <span data-k="soft"></span><span data-k="medium"></span><span data-k="firm"></span><span data-k="hard"></span>
       </div>
     </div>
     <div class="t-buttons">
@@ -822,9 +796,9 @@
     // Tz = Zieltemperatur an der Grenze Eiweiß/Eigelb
     soft:   { label: 'Weich',      title: 'Weiches Ei',      Tz: 63, note: 'Eigelb flüssig' },          // Eiweiß gerade fest
     medium: { label: 'Wachsweich', title: 'Wachsweiches Ei', Tz: 74, note: 'nur der Kern cremig' },     // Eiweiß komplett fest, Eigelb außen gestockt
+    firm:   { label: 'Mittelhart', title: 'Mittelhartes Ei',  Tz: 78, note: 'Mitte noch saftig' },       // Eigelb fast fest, nur die Mitte saftig
     hard:   { label: 'Hart',       title: 'Hartes Ei',       Tz: 82, note: 'durchgegart' }              // Eiweiß und Eigelb durchgehend fest
   };
-  const TASTE_MAX = 20;                                    // ± % Feinjustierung
   const START = {
     fridge: { label: 'Kühlschrank', T: 4 },
     room:   { label: 'Raumtemperatur', T: 22 }
@@ -860,7 +834,6 @@
     start: 'room',                                        // startet immer mit Raumtemperatur
     model: store.get('model', 'williams'),
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
-    taste: 0,                                             // Geschmack startet neutral
     ppm: Number(store.get('ppm', DEFAULT_PPM)),
     keepAwake: store.get('keepAwake', false) === true
   };
@@ -932,7 +905,7 @@
   const eggClass = m => (m < 53 ? 'S' : m < 63 ? 'M' : m < 73 ? 'L' : 'XL');
 
   /* ======================= Physik ======================= */
-  // Kochzeit in Sekunden nach gewählter Formel; der Geschmacksfaktor skaliert die Zeit um ±20 %.
+  // Kochzeit in Sekunden nach gewählter Formel
   function williamsSec(Tz, Tw, Ts, m) {
     const arg = PHYS.F * (Tw - Ts) / (Tw - Tz);
     return PHYS.C * Math.pow(m, 2 / 3) * Math.log(Math.max(arg, 1)) * 60;
@@ -946,15 +919,13 @@
     const Ts = START[state.start].T;
     const m = state.weight;
     const d = eggDims(m).B / 10;                            // Eibreite aus der Schablone in cm
-    const f = 1 + state.taste / 100;
     const stages = {};
     for (const k in DONENESS) {
       const Tz = DONENESS[k].Tz;
-      stages[k] = (model === 'gruber' ? gruberSec(Tz, Tw, Ts, d) : williamsSec(Tz, Tw, Ts, m)) * f;
+      stages[k] = model === 'gruber' ? gruberSec(Tz, Tw, Ts, d) : williamsSec(Tz, Tw, Ts, m);
     }
-    const baseSec = Math.max(1, Math.round(stages[state.doneness] / f));
     const sec = Math.max(1, Math.round(stages[state.doneness]));
-    return { Tw, Ts, m, d, f, stages, baseSec, sec, model };
+    return { Tw, Ts, m, d, stages, sec, model };
   }
 
   /* ======================= DOM ======================= */
@@ -965,7 +936,6 @@
     chips: $$('.chip'), calibStatus: $('#calibStatus'),
     altitude: $('#altitude'), altVal: $('#altVal'), gpsBtn: $('#gpsBtn'), gpsLabel: $('#gpsLabel'), gpsStatus: $('#gpsStatus'),
     boilVal: $('#boilVal'), timeVal: $('#timeVal'),
-    taste: $('#taste'), tasteVal: $('#tasteVal'), tasteDesc: $('#tasteDesc'),
     modelTime: { williams: $('#modelTimeWilliams'), gruber: $('#modelTimeGruber') },
     stageName: $('#stageName'), stageNote: $('#stageNote'), stageBar: $('#stageBar'), stageCursor: $('#stageCursor'),
     stageMks: $$('.stage-mk'), stageTicks: $$('#stageTicks span'),
@@ -1040,11 +1010,6 @@
     setText(el.boilVal, nf(r.Tw, 1) + ' °C');
     setText(el.timeVal, fmt(r.sec) + ' min');
     for (const k in MODELS) setText(el.modelTime[k], fmt(k === r.model ? r.sec : compute(k).sec) + ' min');
-    const t = state.taste;
-    setText(el.tasteVal, t === 0 ? '±0 %' : (t > 0 ? '+' : '−') + Math.abs(t) + ' %');
-    setText(el.tasteDesc, t === 0
-      ? `Exakt nach Formel: ${fmt(r.sec)} min.`
-      : `${t < 0 ? 'Etwas weicher' : 'Etwas fester'}: ${fmt(r.sec)} statt ${fmt(r.baseSec)} min.`);
     return r;
   }
 
@@ -1057,7 +1022,6 @@
   function renderAll() {
     paintRange(el.weight);
     paintRange(el.altitude);
-    paintTaste();
     renderEgg();
     renderResult();
     if (T.status === 'idle') timerLoad();
@@ -1097,21 +1061,6 @@
     el.weight.value = state.weight;
     scheduleRender();
   }));
-
-  /* ======================= Geschmack ======================= */
-  function paintTaste() {
-    const p = (state.taste + TASTE_MAX) / (2 * TASTE_MAX);
-    el.taste.style.setProperty('--a', Math.min(p, 0.5).toFixed(4));
-    el.taste.style.setProperty('--b', Math.max(p, 0.5).toFixed(4));
-  }
-  el.taste.value = state.taste;
-  el.taste.addEventListener('input', () => {
-    const v = clamp(Math.round(Number(el.taste.value) / 5) * 5, -TASTE_MAX, TASTE_MAX);
-    if (v !== state.taste) haptic(v === 0 ? 10 : 5);            // spürbare 5-%-Stufen, Mitte etwas deutlicher
-    state.taste = v;
-    scheduleRender();
-  });
-  el.taste.addEventListener('dblclick', () => { state.taste = 0; el.taste.value = 0; haptic(8); scheduleRender(); });
 
   /* ======================= Höhe & GPS ======================= */
   el.altitude.value = state.altitude;
@@ -1471,6 +1420,7 @@
       };
       if (key === 'soft') { yolk(R + 6, '#FFB020', '#F07800'); gloss(R); }
       else if (key === 'medium') { yolk(R, '#FFE07A', '#F5C542'); yolk(R * 0.62, '#FFA41C', '#F08000'); gloss(R * 0.62); }
+      else if (key === 'firm') { yolk(R, '#FFEA94', '#F4CF55'); yolk(R * 0.3, '#FFC04D', '#F7A21E'); }
       else { yolk(R, '#FFF1A8', '#F3D46A'); }
       g.restore();
       ARTWORK[key] = cv.toDataURL('image/png');
@@ -1519,12 +1469,12 @@
   el.ringProg.style.strokeDasharray = RING_C.toFixed(2);
   const T = { status: 'idle', totalMs: 0, remainingMs: 0, endAt: 0, outMs: 0, raf: 0, iv: 0, cfg: null };
   const ACTIVE = ['running', 'done', 'over'];
-  const STAGE_KEYS = ['soft', 'medium', 'hard'];
+  const STAGE_KEYS = ['soft', 'medium', 'firm', 'hard'];
 
   function timerLoad() {
     const r = compute();
     T.cfg = {
-      sec: r.sec, Tw: r.Tw, taste: state.taste, key: state.doneness,
+      sec: r.sec, Tw: r.Tw, key: state.doneness,
       stages: r.stages, model: MODELS[r.model].label,
       don: DONENESS[state.doneness].label,
       start: START[state.start].label + ' ' + START[state.start].T + ' °C',
@@ -1555,7 +1505,8 @@
     const st = T.cfg.stages;
     if (e < st.soft) return { name: 'Noch roh', note: 'Weich in ' + fmt(st.soft - e) };
     if (e < st.medium) return { name: 'Weich', note: 'Eigelb flüssig · wachsweich in ' + fmt(st.medium - e) };
-    if (e < st.hard) return { name: 'Wachsweich', note: 'nur der Kern cremig · hart in ' + fmt(st.hard - e) };
+    if (e < st.firm) return { name: 'Wachsweich', note: 'nur der Kern cremig · mittelhart in ' + fmt(st.firm - e) };
+    if (e < st.hard) return { name: 'Mittelhart', note: 'Mitte noch saftig · hart in ' + fmt(st.hard - e) };
     if (e < st.hard * 1.3) return { name: 'Hart', note: 'durchgegart' };
     return { name: 'Sehr hart', note: 'grünlicher Rand am Eigelb möglich' };
   }
@@ -1573,7 +1524,6 @@
     });
     el.stageTicks.forEach(t => {
       const k = t.dataset.k;
-      t.style.left = pos(k).toFixed(2) + '%';
       t.classList.toggle('target', k === T.cfg.key);
       const txt = DONENESS[k].label + '\n' + fmt(st[k]);
       if (t.dataset.v !== txt) { t.innerHTML = DONENESS[k].label + '<br>' + fmt(st[k]); t.dataset.v = txt; }
@@ -1629,8 +1579,7 @@
     el.nextBtn.hidden = !nk;
     if (nk) setText(el.nextLabel, `Weiter bis ${DONENESS[nk].label} · noch ${fmt(T.cfg.stages[nk] - eSec)}`);
 
-    const tasteChip = T.cfg.taste ? `<span>Geschmack ${T.cfg.taste > 0 ? '+' : '−'}${Math.abs(T.cfg.taste)} %</span>` : '';
-    const sum = `<span>${T.cfg.model}</span><span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>${tasteChip}`;
+    const sum = `<span>${T.cfg.model}</span><span>${T.cfg.don}</span><span>${nf(T.cfg.weight, T.cfg.weight % 1 ? 1 : 0)} g · ${eggClass(T.cfg.weight)}</span><span>${T.cfg.start}</span><span>${nf(T.cfg.alt, 0)} m · ${nf(T.cfg.Tw, 1)} °C</span>`;
     if (el.tSummary.dataset.v !== sum) { el.tSummary.innerHTML = sum; el.tSummary.dataset.v = sum; }
 
     // Schwebende Leiste unten
