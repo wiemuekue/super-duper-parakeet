@@ -488,15 +488,23 @@
     background: var(--label3);
   }
   .stage-mk.target { background: var(--label); width: 3px; margin-left: -1.5px; }
+  .stage-mk.reached { background: var(--green); }
   .stage-cursor {
     position: absolute; top: 50%; left: 0; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%;
     background: var(--knob); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25), 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
     transition: left 0.25s linear;
   }
   /* Legende in vier festen Spalten, damit nahe Stufen sich nie überlappen */
-  .stage-ticks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 6px; font-size: 11px; color: var(--label2); font-variant-numeric: tabular-nums; }
-  .stage-ticks span { text-align: center; line-height: 14px; white-space: nowrap; }
+  /* Namen direkt unter den Strichen; liegen Stufen zu eng, rückt ein Name eine Zeile tiefer */
+  .stage-ticks { position: relative; height: 30px; margin-top: 7px; font-size: 11px; color: var(--label2); font-variant-numeric: tabular-nums; }
+  .stage-ticks span {
+    position: absolute; left: 0; top: 0; text-align: center; line-height: 14px; white-space: nowrap;
+    transition: color 0.3s ease;
+  }
   .stage-ticks span.target { color: var(--label); font-weight: 600; }
+  .stage-ticks span.reached { color: var(--green); font-weight: 600; }
+  .stage-ticks span.reached b::before { content: "✓ "; }
+  .stage-ticks span b { font-weight: inherit; }
   .t-time.over { color: var(--green); font-size: min(14vw, 56px); }
 
   .t-buttons { display: flex; justify-content: space-between; align-items: center; max-width: 330px; margin: 14px auto 0; padding: 0 6px; }
@@ -794,7 +802,7 @@
   };
   const DONENESS = {
     // Tz = Zieltemperatur an der Grenze Eiweiß/Eigelb
-    soft:   { label: 'Weich',      title: 'Weiches Ei',      Tz: 63, note: 'Eigelb flüssig' },          // Eiweiß gerade fest
+    soft:   { label: 'Weich',      title: 'Weiches Ei',      Tz: 66, note: 'Eigelb flüssig' },          // Eiweiß ganz fest, Eigelb flüssig
     medium: { label: 'Wachsweich', title: 'Wachsweiches Ei', Tz: 74, note: 'nur der Kern cremig' },     // Eiweiß komplett fest, Eigelb außen gestockt
     firm:   { label: 'Mittelhart', title: 'Mittelhartes Ei',  Tz: 78, note: 'Mitte noch saftig' },       // Eigelb fast fest, nur die Mitte saftig
     hard:   { label: 'Hart',       title: 'Hartes Ei',       Tz: 82, note: 'durchgegart' }              // Eiweiß und Eigelb durchgehend fest
@@ -1507,28 +1515,56 @@
     if (e < st.medium) return { name: 'Weich', note: 'Eigelb flüssig · wachsweich in ' + fmt(st.medium - e) };
     if (e < st.firm) return { name: 'Wachsweich', note: 'nur der Kern cremig · mittelhart in ' + fmt(st.firm - e) };
     if (e < st.hard) return { name: 'Mittelhart', note: 'Mitte noch saftig · hart in ' + fmt(st.hard - e) };
-    if (e < st.hard * 1.3) return { name: 'Hart', note: 'durchgegart' };
+    if (e < st.hard * 1.3) return { name: 'Hart', note: 'durchgegart' };                // danach: sehr hart
     return { name: 'Sehr hart', note: 'grünlicher Rand am Eigelb möglich' };
+  }
+
+  // Namen mittig unter ihre Striche setzen; überlappt ein Name den vorigen, kommt er in die zweite Zeile
+  function layoutTicks(pcts) {
+    const box = el.stageTicks[0].parentElement, W = box.clientWidth;
+    if (!W) return;
+    const key = W + '|' + pcts.map(p => p.toFixed(1)).join(',') + '|' + el.stageTicks.map(t => t.className).join(',');
+    if (box.dataset.v === key) return;
+    box.dataset.v = key;
+    const GAP = 6, rowEnd = [-Infinity, -Infinity];
+    let rows = 1;
+    el.stageTicks.forEach((t, i) => {
+      const w = t.offsetWidth;
+      let left = clamp(pcts[i] / 100 * W - w / 2, 0, Math.max(0, W - w));
+      let row = left >= rowEnd[0] + GAP ? 0 : 1;
+      if (row === 1) { left = Math.max(left, rowEnd[1] + GAP); rows = 2; }
+      rowEnd[row] = left + w;
+      t.style.transform = `translate(${left.toFixed(1)}px, ${row * 30}px)`;
+    });
+    box.style.height = rows === 2 ? '60px' : '30px';
   }
 
   function renderStage(eSec) {
     const st = T.cfg.stages;
-    const max = Math.max(st.hard * 1.3, eSec * 1.02);
-    const pos = k => (st[k] / max * 100);
+    // Maßstab: die "rohe" Anfangszeit bis 70 % von Weich auf die ersten 20 % gestaucht,
+    // damit die eng liegenden Garstufen mehr Platz bekommen
+    const a = st.soft * 0.7, max = Math.max(st.hard * 1.15, eSec * 1.02);
+    const X = t => t <= a ? 20 * t / a : 20 + 80 * (t - a) / (max - a);
+    const pos = k => X(st[k]);
     el.stageBar.style.setProperty('--s1', pos('soft').toFixed(2) + '%');
     el.stageBar.style.setProperty('--s2', pos('medium').toFixed(2) + '%');
     el.stageBar.style.setProperty('--s3', pos('hard').toFixed(2) + '%');
+    const reached = k => T.status !== 'idle' && eSec >= st[k];
     el.stageMks.forEach(m => {
-      m.style.left = pos(m.dataset.k).toFixed(2) + '%';
-      m.classList.toggle('target', m.dataset.k === T.cfg.key);
+      const k = m.dataset.k;
+      m.style.left = pos(k).toFixed(2) + '%';
+      m.classList.toggle('target', k === T.cfg.key);
+      m.classList.toggle('reached', reached(k));
     });
     el.stageTicks.forEach(t => {
       const k = t.dataset.k;
       t.classList.toggle('target', k === T.cfg.key);
-      const txt = DONENESS[k].label + '\n' + fmt(st[k]);
-      if (t.dataset.v !== txt) { t.innerHTML = DONENESS[k].label + '<br>' + fmt(st[k]); t.dataset.v = txt; }
+      t.classList.toggle('reached', reached(k));
+      const txt = DONENESS[k].label + '|' + fmt(st[k]);
+      if (t.dataset.v !== txt) { t.innerHTML = '<b>' + DONENESS[k].label + '</b><br>' + fmt(st[k]); t.dataset.v = txt; }
     });
-    el.stageCursor.style.left = clamp(eSec / max * 100, 0, 100).toFixed(2) + '%';
+    layoutTicks(STAGE_KEYS.map(pos));
+    el.stageCursor.style.left = clamp(X(eSec), 0, 100).toFixed(2) + '%';
     let name, note;
     if (T.status === 'idle') { name = 'Ziel: ' + T.cfg.don; note = DONENESS[T.cfg.key].note; }
     else ({ name, note } = stageAt(eSec));
