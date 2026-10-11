@@ -900,7 +900,7 @@
 
   const state = {
     weight: 58,                                           // startet immer mit Größe M
-    doneness: 'medium',                                   // startet immer mit Wachsweich
+    doneness: 'firm',                                     // startet immer mit Mittelhart
     start: 'room',                                        // startet immer mit Raumtemperatur
     model: SHOW_MODEL_SWITCH ? store.get('model', 'williams') : 'williams',
     altitude: clamp(Math.round((Number(store.get('altitude', 10)) || 0) / 10) * 10, 0, 3000),
