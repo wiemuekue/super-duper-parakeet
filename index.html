@@ -1464,8 +1464,23 @@
       bg.audio.addEventListener('ended', () => {
         if (T.status === 'done') { T.status = 'over'; renderTimer(); }
       });
+      // Erst wenn die Wiedergabe wirklich läuft, auf die aktuelle Uhrzeit ausrichten
+      bg.audio.addEventListener('playing', () => bgSync(true));
     }
     return bg.audio;
+  }
+  // Position, an der die Spur jetzt laut Uhr stehen muss (Start des Kochens = endAt − Gesamtzeit)
+  function bgExpected() {
+    return Math.max(0, (Date.now() - (T.endAt - T.totalMs)) / 1000);
+  }
+  // Spur an die echte Uhrzeit angleichen, damit der Alarm nicht hinterherhinkt.
+  // Ohne force nur bei mehr als 0,25 s Abweichung (vor 00:00 ist die Spur still, Springen ist unhörbar).
+  function bgSync(force) {
+    const a = bg.audio;
+    if (!bg.ok || !a || a.paused || a.readyState < 1) return;
+    if (T.status !== 'running' && T.status !== 'done') return;
+    const exp = bgExpected();
+    if (force || Math.abs(a.currentTime - exp) > 0.25) { try { a.currentTime = exp; } catch (e) { /* */ } }
   }
   // Muss aus einem Tipp heraus aufgerufen werden (iOS erlaubt Wiedergabe nur nach Nutzeraktion)
   function bgPlayFrom(elapsedSec) {
@@ -1477,11 +1492,13 @@
         bg.totalMs = T.totalMs;
         a.src = bg.url;
       }
-      const seek = () => { try { a.currentTime = elapsedSec; } catch (e) { /* */ } };
+      // Position immer im Moment des Springens aus der Uhr berechnen, nicht beim Antippen:
+      // Laden und Starten der Spur dauern sonst als Verspätung mit
+      const seek = () => { try { a.currentTime = T.status === 'running' ? bgExpected() : elapsedSec; } catch (e) { /* */ } };
       if (a.readyState >= 1) seek(); else a.addEventListener('loadedmetadata', seek, { once: true });
       const pr = a.play();
       bg.ok = true;
-      if (pr && pr.then) pr.then(() => { if (Math.abs(a.currentTime - elapsedSec) > 1) seek(); }).catch(() => { bg.ok = false; });
+      if (pr && pr.then) pr.then(() => bgSync(true)).catch(() => { bg.ok = false; });
       setMediaSession();
     } catch (e) { bg.ok = false; }
   }
@@ -1769,9 +1786,11 @@
     if (document.title !== title) document.title = title;
   }
 
+  let lastBgSync = 0;
   function tick() {
     if (!ACTIVE.includes(T.status)) return;
     if (T.status === 'running' && T.endAt - Date.now() <= 0) { finish(); return; }
+    if (T.status === 'running' && Date.now() - lastBgSync > 1000) { lastBgSync = Date.now(); bgSync(false); }
     renderTimer();
   }
   function loop() {
@@ -1820,9 +1839,10 @@
     T.status = 'done';
     T.remainingMs = 0;
     startLoops();                                           // Zeit läuft nach 00:00 weiter
-    if (bgAlarmPlaying()) {
-      // Die Hintergrund-Spur klingelt bereits
+    if (bgAlarmPlaying() && !late) {
+      bgSync(true);                                         // hängt die Spur hinterher, springt sie jetzt direkt zum Alarm
     } else if (late) {
+      bgPause();
       T.status = 'over';                                    // Alarm ist schon durchgelaufen: nur kurz erinnern
       const c = audioCtx();
       if (c) playMelody(c.currentTime + 0.05);
@@ -1897,7 +1917,7 @@
     if (document.visibilityState !== 'visible') return;
     if (ACTIVE.includes(T.status)) {
       if (T.status === 'running' && T.endAt - Date.now() <= 0) finish();
-      else startLoops();
+      else { startLoops(); if (T.status === 'running') bgSync(false); }
       syncWakeLock();
     }
     if (actx && actx.state !== 'running' && T.status !== 'idle') actx.resume().catch(() => {});
